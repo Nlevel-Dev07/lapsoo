@@ -15,12 +15,17 @@ const allowedOrigins = (process.env.ALLOWED_ORIGIN ?? "http://localhost:5173")
   .map((o) => o.trim())
 
 async function main() {
+  console.log(`Allowed origins: ${JSON.stringify(allowedOrigins)}`)
+
   const app = express()
   app.use(
     cors({
       origin(origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) callback(null, true)
-        else callback(new Error(`Origin ${origin} not allowed by CORS`))
+        else {
+          console.error(`Rejected origin: ${JSON.stringify(origin)}`)
+          callback(new Error(`Origin ${origin} not allowed by CORS`))
+        }
       },
       credentials: true,
     })
