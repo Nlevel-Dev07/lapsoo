@@ -1,0 +1,63 @@
+export const SITE = {
+  name: "Lapsoo",
+  tagline: "India's Smart Laptop Ecosystem",
+  phone: "+91 99112 02101",
+  phoneRaw: "919911202101",
+  whatsapp: "919911202101",
+  email: "info@lapsoo.com",
+  corporateEmail: "info@lapsoo.com",
+  hours: "Mon – Sun, 10:30 AM – 8:30 PM",
+  // Short line used in the Footer and Contact map preview.
+  primaryAddress: "M3M Urbana, Golf Course Extension Road, Sector 67, Gurugram, Haryana",
+  // Sourced from the Google Maps listings provided. 6 of 7 confirmed — 1 slot still needs an address.
+  addresses: [
+    {
+      city: "M3M Urbana — Dell Exclusive Store",
+      line: "R6-001, M3M Urbana, Golf Course Extension Road, Sector 67, Gurugram, Haryana 122102",
+      phone: "+91 99112 02101",
+    },
+    {
+      city: "M3M Urbana — ASUS & Lenovo Exclusive Store",
+      line: "Block R4, Shop 16, M3M Urbana, Golf Course Extension Road, Sector 67, Gurugram, Haryana 122102",
+      phone: "+91 80370 16415",
+    },
+    {
+      city: "M3M Urbana — Acer Mall Exclusive Store",
+      line: "Gate No. 2, R2-0018, M3M Urbana Premium, Behind KFC, Ramgarh, Sector 67, Gurugram, Haryana 122101",
+      phone: "+91 99112 02101",
+    },
+    {
+      city: "MG Road — Dell Exclusive Store",
+      line: "6A, FF, MGF Megacity Mall, MG Road, Sector 28, Gurugram, Haryana 122002",
+      phone: "+91 99112 02101",
+    },
+    {
+      city: "New Railway Road — A One Music & Computers (HQ)",
+      line: "9-10, Bhargava Palace, New Railway Road, Gurgaon, Haryana 122001",
+      phone: "+91 97112 29490",
+    },
+    {
+      city: "New Railway Road — Acer Mall Exclusive Store",
+      line: "165/6, Furniture Market, Jacobpura, New Railway Road, Gurugram, Haryana 122001",
+      phone: "+91 99112 02101",
+    },
+    // TODO: 1 more store address still needed to reach all 7 Gurgaon locations.
+    { city: "Store 7", line: "Address to be added, Gurgaon, Haryana", phone: "+91 99112 02101" },
+  ],
+}
+
+// TODO: replace "#" with the real Lapsoo social profile URLs.
+export const socialLinks = [
+  { id: "instagram" as const, label: "Follow Lapsoo on Instagram", href: "#" },
+  { id: "facebook" as const, label: "Follow Lapsoo on Facebook", href: "#" },
+  { id: "linkedin" as const, label: "Follow Lapsoo on LinkedIn", href: "#" },
+  { id: "twitter" as const, label: "Follow Lapsoo on X", href: "#" },
+]
+
+export function waLink(message: string) {
+  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`
+}
+
+export function telLink() {
+  return `tel:+${SITE.phoneRaw}`
+}

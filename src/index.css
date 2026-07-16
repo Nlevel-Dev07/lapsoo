@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Manrope", system-ui, -apple-system, sans-serif;
+
+  --color-ink: #0a0a0c;
+  --color-ink-soft: #16171c;
+  --color-paper: #ffffff;
+  --color-paper-soft: #f6f7f9;
+  --color-line: #e6e7eb;
+
+  --color-blue-50: #eef4ff;
+  --color-blue-100: #dbe6ff;
+  --color-blue-400: #4f7dff;
+  --color-blue-500: #2f5eff;
+  --color-blue-600: #1e46e0;
+  --color-blue-700: #1533a8;
+
+  --color-graphite-900: #0b0c10;
+  --color-graphite-800: #121319;
+  --color-graphite-700: #1b1d26;
+  --color-graphite-600: #262834;
+
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-marquee: marquee 32s linear infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  border-color: var(--color-line);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-blue-500);
+  color: white;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* thin premium scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d5da; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #b7b8c0; }
+
+.container-lap {
+  width: 100%;
+  max-width: 1360px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@media (min-width: 768px) {
+  .container-lap { padding-inline: 40px; }
+}
+
+.text-balance {
+  text-wrap: balance;
+}

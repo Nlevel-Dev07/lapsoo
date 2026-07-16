@@ -1,0 +1,2 @@
+# Backend now runs on Railway; keep Vercel from also auto-detecting these as serverless functions.
+api
