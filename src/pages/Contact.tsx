@@ -63,9 +63,6 @@ export default function Contact() {
                   <div>
                     <p className="font-semibold text-sm">{a.city}</p>
                     <p className="text-sm text-ink/50 mt-0.5">{a.line}</p>
-                    {a.phone && (
-                      <a href={`tel:${a.phone.replace(/\s/g, "")}`} className="text-sm text-blue-600 font-medium mt-1 inline-block">{a.phone}</a>
-                    )}
                   </div>
                 </div>
               ))}
