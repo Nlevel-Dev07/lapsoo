@@ -14,35 +14,31 @@ export const SITE = {
     {
       city: "M3M Urbana — Dell Exclusive Store",
       line: "R6-001, M3M Urbana, Golf Course Extension Road, Sector 67, Gurugram, Haryana 122102",
-      phone: "+91 99112 02101",
     },
     {
-      city: "M3M Urbana — ASUS & Lenovo Exclusive Store",
-      line: "Block R4, Shop 16, M3M Urbana, Golf Course Extension Road, Sector 67, Gurugram, Haryana 122102",
-      phone: "+91 80370 16415",
+      city: "M3M Urbana — ASUS Exclusive Store",
+      line: "R4-016, M3M Urbana, Golf Course Extension Road, Sector 67, Gurugram, Haryana 122102",
+    },
+    {
+      city: "M3M Urbana — Lenovo Exclusive Store",
+      line: "M3M Urbana Premium, R2-002, Sector 67, Gurugram, Haryana 122101",
     },
     {
       city: "M3M Urbana — Acer Mall Exclusive Store",
       line: "Gate No. 2, R2-0018, M3M Urbana Premium, Behind KFC, Ramgarh, Sector 67, Gurugram, Haryana 122101",
-      phone: "+91 99112 02101",
     },
     {
       city: "MG Road — Dell Exclusive Store",
       line: "6A, FF, MGF Megacity Mall, MG Road, Sector 28, Gurugram, Haryana 122002",
-      phone: "+91 99112 02101",
+    },
+    {
+      city: "Golf Course Road — Acer Mall Exclusive Store",
+      line: "A14/4, GF, Golf Course Rd, DLF Phase 1, Gurugram, Haryana 122002",
     },
     {
       city: "New Railway Road — A One Music & Computers (HQ)",
       line: "9-10, Bhargava Palace, New Railway Road, Gurgaon, Haryana 122001",
-      phone: "+91 97112 29490",
-    },
-    {
-      city: "New Railway Road — Acer Mall Exclusive Store",
-      line: "165/6, Furniture Market, Jacobpura, New Railway Road, Gurugram, Haryana 122001",
-      phone: "+91 99112 02101",
-    },
-    // TODO: 1 more store address still needed to reach all 7 Gurgaon locations.
-    { city: "Store 7", line: "Address to be added, Gurgaon, Haryana", phone: "+91 99112 02101" },
+    }
   ],
 }
 

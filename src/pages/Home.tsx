@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { ArrowRight, ShieldCheck, Truck, Award, Users, Wrench, RefreshCw, Sparkles, Building2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CTAGroup } from "@/components/shared/CTAGroup"
@@ -20,6 +21,17 @@ const fadeUp = {
 
 const ecosystems = [
   {
+    name: "LaptopBazaar",
+    tag: "Brand New Laptops",
+    desc: "Authorized partner for Dell, Lenovo, ASUS, Acer, Apple & HP — sealed box, full warranty.",
+    to: "/laptopbazaar",
+    cta: "Explore",
+    icon: Sparkles,
+    from: "#1e46e0",
+    to2: "#121319",
+    logo: "/images/laptopbazaar-logo.png",
+  },
+  {
     name: "LapAndTop",
     tag: "Certified Refurbished Laptops",
     desc: "Business, student, gaming & workstation laptops — professionally graded, tested, and warrantied.",
@@ -29,17 +41,6 @@ const ecosystems = [
     from: "#2f5eff",
     to2: "#0b0c10",
     logo: "/images/lapandtop-logo-black.png",
-  },
-  {
-    name: "LaptopBazaar",
-    tag: "Brand New Laptops",
-    desc: "Authorized partner for HP, Dell, Lenovo, ASUS, Acer & Apple — sealed box, full warranty.",
-    to: "/laptopbazaar",
-    cta: "Explore",
-    icon: Sparkles,
-    from: "#1e46e0",
-    to2: "#121319",
-    logo: "/images/laptopbazaar-logo.png",
   },
   {
     name: "LapTech",
@@ -56,7 +57,7 @@ const ecosystems = [
 ]
 
 const brandLogos = [
-  { name: "Dell", src: "/images/brands/dell-logo.png" },
+  { name: "Dell", src: "/images/brands/dell-logo.png", className: "h-7 md:h-9" },
   { name: "Lenovo", src: "/images/brands/lenovo-logo.png" },
   { name: "ASUS", src: "/images/brands/asus-logo.png" },
   { name: "Acer", src: "/images/brands/acer-logo.png" },
@@ -67,7 +68,7 @@ const brandLogos = [
 const trust = [
   { icon: ShieldCheck, label: "120-Point Quality Check", desc: "Every refurbished unit is fully diagnosed and certified" },
   { icon: Award, label: "Authorized Brand Partner", desc: "Official channel for 6 leading laptop manufacturers" },
-  { icon: Truck, label: "Pickup & Drop Service", desc: "Doorstep repair pickup across major cities" },
+  { icon: Truck, label: "Pickup & Drop Service", desc: "Doorstep pickup across Gurugram" },
   { icon: Users, label: "15,000+ Happy Customers", desc: "Trusted by individuals, students & enterprises" },
 ]
 
@@ -110,7 +111,7 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="mt-6 text-lg text-ink/55 leading-relaxed max-w-xl"
               >
-                Buy new laptops. Buy certified refurbished. Repair & upgrade. Lapsoo brings together LapAndTop, LaptopBazaar, and LapTech — everything under one trusted ecosystem.
+                Buy new laptops. Buy certified refurbished. Repair & upgrade. Lapsoo brings together LaptopBazaar, LapAndTop and LapTech — everything under one trusted ecosystem.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -178,7 +179,10 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: i * 0.06 }}
                 src={b.src}
                 alt={b.name}
-                className="h-11 md:h-14 w-auto opacity-80 hover:opacity-100 transition-opacity duration-300"
+                className={cn(
+                  "className" in b && b.className ? b.className : "h-11 md:h-14",
+                  "w-auto opacity-80 hover:opacity-100 transition-opacity duration-300"
+                )}
               />
             ))}
           </div>

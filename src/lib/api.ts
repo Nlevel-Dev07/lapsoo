@@ -145,6 +145,37 @@ export function submitSellExchange(payload: SellExchangePayload) {
   return request<{ id: string }>("/sell-exchange", { method: "POST", body: JSON.stringify(payload) })
 }
 
+// ---------- Customer: auth ----------
+
+export interface CustomerSession {
+  id: string
+  email: string
+  name: string
+}
+
+export interface CustomerSignupPayload {
+  name: string
+  email: string
+  phone?: string
+  password: string
+}
+
+export function customerSignup(payload: CustomerSignupPayload) {
+  return request<CustomerSession>("/auth/customer-signup", { method: "POST", body: JSON.stringify(payload) })
+}
+
+export function customerLogin(email: string, password: string) {
+  return request<CustomerSession>("/auth/customer-login", { method: "POST", body: JSON.stringify({ email, password }) })
+}
+
+export function customerLogout() {
+  return request<{ ok: true }>("/auth/customer-logout", { method: "POST" })
+}
+
+export function customerMe() {
+  return request<CustomerSession>("/auth/customer-me")
+}
+
 // ---------- Admin: auth ----------
 
 export interface AdminSession {

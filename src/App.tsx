@@ -11,6 +11,7 @@ import Contact from "@/pages/Contact"
 import Blog from "@/pages/Blog"
 import BlogPost from "@/pages/BlogPost"
 import SellExchange from "@/pages/SellExchange"
+import Login from "@/pages/Login"
 import NotFound from "@/pages/NotFound"
 
 import { ProtectedRoute } from "@/admin/ProtectedRoute"
@@ -40,6 +41,7 @@ function App() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/sell-exchange" element={<SellExchange />} />
+          <Route path="/login" element={<Login />} />
           <Route path="*" element={<NotFound />} />
         </Route>
 

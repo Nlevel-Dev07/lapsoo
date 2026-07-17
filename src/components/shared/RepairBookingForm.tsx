@@ -1,8 +1,9 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CheckCircle2, Copy, LocateFixed } from "lucide-react"
+import { CheckCircle2, Copy, LocateFixed, LogIn } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { MediaUploadField, emptyMediaSlots, type MediaSlots } from "@/components/shared/MediaUploadField"
 import { submitRepairBooking, ApiError } from "@/lib/api"
+import { useCustomerAuth } from "@/hooks/useCustomerAuth"
 
 const schema = z.object({
   name: z.string().min(2, "Please enter your full name"),
@@ -25,6 +27,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function RepairBookingForm() {
+  const { isAuthenticated, isLoading: authLoading } = useCustomerAuth()
   const [trackingCode, setTrackingCode] = useState<string | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
   const [mediaSlots, setMediaSlots] = useState<MediaSlots>(emptyMediaSlots)
@@ -77,6 +80,23 @@ export function RepairBookingForm() {
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : "Something went wrong. Please try again or WhatsApp us.")
     }
+  }
+
+  if (authLoading) {
+    return <div className="h-64" />
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="py-6 text-center">
+        <LogIn className="h-10 w-10 text-blue-500 mx-auto" />
+        <h3 className="mt-4 font-display text-xl font-bold">Login to book a repair</h3>
+        <p className="mt-2 text-sm text-ink/55">Please sign in or create a free account so we can track your repair and keep you updated.</p>
+        <Link to="/login" className="mt-6 inline-block">
+          <Button variant="accent" size="lg">Login / Sign Up</Button>
+        </Link>
+      </div>
+    )
   }
 
   if (trackingCode) {

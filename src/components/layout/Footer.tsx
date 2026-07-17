@@ -1,9 +1,20 @@
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Phone, Mail, MapPin } from "lucide-react"
 import { SITE, telLink, socialLinks } from "@/data/site"
 import { SocialIconRow } from "@/components/shared/SocialIcon"
 
 const columns = [
+  {
+    title: "LaptopBazaar",
+    links: [
+      { label: "Business Laptops", to: "/laptopbazaar?category=Business" },
+      { label: "Student Laptops", to: "/laptopbazaar?category=Student" },
+      { label: "Gaming Laptops", to: "/laptopbazaar?category=Gaming" },
+      { label: "MacBooks", to: "/laptopbazaar?category=MacBook" },
+      { label: "Workstations", to: "/laptopbazaar?category=Workstation" },
+      { label: "Corporate Procurement", to: "/corporate" },
+    ],
+  },
   {
     title: "LapAndTop",
     links: [
@@ -11,16 +22,8 @@ const columns = [
       { label: "Student Laptops", to: "/lapandtop?category=Student" },
       { label: "Gaming Laptops", to: "/lapandtop?category=Gaming" },
       { label: "MacBooks", to: "/lapandtop?category=MacBook" },
+      { label: "Workstations", to: "/lapandtop?category=Workstation" },
       { label: "Sell / Exchange", to: "/sell-exchange" },
-    ],
-  },
-  {
-    title: "LaptopBazaar",
-    links: [
-      { label: "New Laptops", to: "/laptopbazaar" },
-      { label: "Corporate Procurement", to: "/corporate" },
-      { label: "Bulk Orders", to: "/corporate" },
-      { label: "Student Offers", to: "/laptopbazaar?category=Student" },
     ],
   },
   {
@@ -44,11 +47,26 @@ const columns = [
 ]
 
 export function Footer() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const goHome = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    } else {
+      navigate("/")
+      window.scrollTo({ top: 0 })
+    }
+  }
+
   return (
     <footer className="bg-[#091739] text-white">
       <div className="container-lap py-16 grid grid-cols-2 md:grid-cols-6 gap-10">
         <div className="col-span-2">
-          <img src="/images/lapsoo-logo-dark.png" alt="Lapsoo" className="h-8 w-auto" />
+          <Link to="/" onClick={goHome}>
+            <img src="/images/lapsoo-logo-dark.png" alt="Lapsoo" className="h-8 w-auto" />
+          </Link>
           <p className="mt-3 text-sm text-white/50 leading-relaxed max-w-xs">
             India's Smart Laptop Ecosystem — new laptops, certified refurbished devices, and expert repair, all under one trusted roof.
           </p>

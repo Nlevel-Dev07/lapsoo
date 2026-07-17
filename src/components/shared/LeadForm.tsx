@@ -13,7 +13,7 @@ const schema = z.object({
   name: z.string().min(2, "Please enter your full name"),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
   email: z.string().email("Enter a valid email").optional().or(z.literal("")),
-  city: z.literal("Gurgaon"),
+  city: z.string().optional(),
   message: z.string().optional(),
 })
 
@@ -35,7 +35,7 @@ export function LeadForm({ title, description, submitLabel = "Submit Enquiry", s
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { city: "Gurgaon" } })
+  } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
   const onSubmit = async (data: FormValues) => {
     setServerError(null)
@@ -78,8 +78,8 @@ export function LeadForm({ title, description, submitLabel = "Submit Enquiry", s
           <Input id="email" placeholder="you@email.com" {...register("email")} />
         </div>
         <div>
-          <Label htmlFor="city">City *</Label>
-          <Input id="city" readOnly value="Gurgaon" {...register("city")} />
+          <Label htmlFor="city">City</Label>
+          <Input id="city" placeholder="Your city" {...register("city")} />
         </div>
       </div>
 

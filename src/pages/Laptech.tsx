@@ -33,7 +33,7 @@ const process = [
 ]
 
 const faqs = [
-  { q: "Do you offer pickup and drop service?", a: "Yes — we offer free pickup and drop across Delhi NCR, Bengaluru and Gurugram for most repairs. Charges may apply outside these zones." },
+  { q: "Do you offer pickup and drop service?", a: "Yes — we offer free pickup and drop across Gurugram for most repairs. Charges may apply outside these zones." },
   { q: "How long does a typical repair take?", a: "Screen, battery, RAM and SSD upgrades are usually completed same-day. Motherboard and chip-level repairs may take 2-4 business days depending on parts availability." },
   { q: "Is there a warranty on repairs?", a: "Yes, all repairs come with a warranty ranging from 3 to 6 months depending on the service, covering the part and workmanship." },
   { q: "Can I track my repair status?", a: "Yes, once your device is booked in, you'll receive a tracking ID via SMS/WhatsApp to check live repair status." },
@@ -129,7 +129,7 @@ export default function Laptech() {
             >
               <Truck className="h-6 w-6 text-blue-400" />
               <h4 className="mt-5 font-semibold">Free Pickup & Drop</h4>
-              <p className="mt-2 text-sm text-white/50 leading-relaxed">Available across Delhi NCR, Bengaluru & Gurugram for eligible repairs.</p>
+              <p className="mt-2 text-sm text-white/50 leading-relaxed">Available across Gurugram for eligible repairs.</p>
             </motion.div>
           </div>
         </div>
