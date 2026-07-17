@@ -1,9 +1,9 @@
 import type { Product } from "@/data/products"
 import type { BlogPost } from "@/data/blog"
 
-// In split deployments (Vercel frontend + Railway backend) this points at the
-// Railway API origin; same-origin/local dev leaves it unset and falls back to "/api".
-const BASE = `${import.meta.env.VITE_API_URL ?? ""}/api`
+// vercel.json proxies /api/* through to the Railway backend server-side, so the
+// browser only ever sees the Vercel origin — keeps auth cookies same-site everywhere.
+const BASE = "/api"
 
 class ApiError extends Error {
   status: number

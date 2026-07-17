@@ -26,8 +26,8 @@ export function signSession(payload: AdminSession) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: `${SESSION_DAYS}d` })
 }
 
-// Frontend (Vercel) and API (Railway) are different origins in production, so the
-// session cookie must be SameSite=None to be sent cross-site; that requires Secure too.
+// vercel.json proxies /api/* to Railway server-side, so the browser only ever talks
+// to the Vercel origin — the cookie is same-site there, no need for SameSite=None.
 const isProd = process.env.NODE_ENV === "production"
 
 export function setSessionCookie(res: VercelResponse, token: string) {
@@ -36,7 +36,7 @@ export function setSessionCookie(res: VercelResponse, token: string) {
     cookie.serialize(COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
+      sameSite: "lax",
       path: "/",
       maxAge: SESSION_DAYS * 24 * 60 * 60,
     })
@@ -49,7 +49,7 @@ export function clearSessionCookie(res: VercelResponse) {
     cookie.serialize(COOKIE_NAME, "", {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
+      sameSite: "lax",
       path: "/",
       maxAge: 0,
     })
