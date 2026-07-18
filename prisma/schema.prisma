@@ -67,6 +67,11 @@ enum AdminRole {
   SUPPORT
 }
 
+enum SellExchangeType {
+  SELL
+  EXCHANGE
+}
+
 // ---------- Core catalog ----------
 
 model Brand {
@@ -176,28 +181,41 @@ model CorporateLead {
 }
 
 model RepairRequest {
-  id           String       @id @default(cuid())
-  trackingCode String       @unique
-  status       RepairStatus @default(BOOKED)
-  name         String
-  phone        String
-  email        String?
-  city         String?
-  location     String?      @db.Text
-  device       String
-  serialNumber String?
-  issueType    String
-  message      String?      @db.Text
-  mediaUrls    Json         @default("[]")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  trackingCode   String       @unique
+  status         RepairStatus @default(BOOKED)
+  customerId     String?
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  name           String
+  phone          String
+  email          String?
+  city           String?
+  location       String?      @db.Text
+  deviceCategory String?
+  brand          String?
+  condition      String?
+  device         String
+  serialNumber   String?
+  password       String?
+  accessories    Json         @default("[]")
+  issueType      String
+  message        String?      @db.Text
+  mediaUrls      Json         @default("[]")
+  estimateAmount Int?
+  technicianId   String?
+  technician     Technician?  @relation(fields: [technicianId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([status])
+  @@index([customerId])
+  @@index([technicianId])
 }
 
 model SellExchangeLead {
-  id        String     @id @default(cuid())
-  status    LeadStatus @default(NEW)
+  id        String            @id @default(cuid())
+  type      SellExchangeType  @default(SELL)
+  status    LeadStatus        @default(NEW)
   name      String
   phone     String
   email     String?
@@ -205,26 +223,37 @@ model SellExchangeLead {
   brand     String
   age       String
   condition String
-  message   String?    @db.Text
-  mediaUrls Json       @default("[]")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  message   String?           @db.Text
+  mediaUrls Json              @default("[]")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
-  @@index([status])
+  @@index([type, status])
+}
+
+model Technician {
+  id             String          @id @default(cuid())
+  name           String
+  phone          String?
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  repairRequests RepairRequest[]
 }
 
 // ---------- Customers ----------
 
 model Customer {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  phone        String?
-  passwordHash String
-  active       Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  phone          String?
+  passwordHash   String
+  active         Boolean         @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  repairRequests RepairRequest[]
 }
 
 // ---------- Admin ----------

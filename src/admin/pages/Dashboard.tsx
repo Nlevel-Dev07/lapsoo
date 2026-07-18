@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Laptop, Tag, Newspaper, Inbox, Building2, Wrench, RefreshCw, TrendingUp } from "lucide-react"
+import { Laptop, Tag, Newspaper, Inbox, Building2, Wrench, RefreshCw, TrendingUp, Users } from "lucide-react"
 import { fetchDashboardStats } from "@/lib/api"
 
 const sourceLabels: Record<string, string> = {
@@ -35,6 +35,7 @@ export default function Dashboard() {
             <StatCard icon={Tag} label="Brands" value={data.catalog.brandCount} />
             <StatCard icon={Newspaper} label="Blog Posts" value={data.catalog.blogCount} />
             <StatCard icon={TrendingUp} label="Leads (30 days)" value={data.leads.last30Days} accent />
+            <StatCard icon={Users} label="Registered Customers" value={data.customers.total} sub={`${data.customers.last30Days} new in 30 days`} />
           </div>
 
           <div className="mt-10 grid lg:grid-cols-2 gap-5">

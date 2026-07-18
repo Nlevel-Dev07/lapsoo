@@ -30,7 +30,7 @@ async function main() {
       credentials: true,
     })
   )
-  app.use(express.json())
+  app.use(express.json({ limit: "10mb" }))
 
   // Static routes must be registered before dynamic ones (e.g. products/bulk-import.ts
   // before products/[id].ts), or Express matches the dynamic segment first. fast-glob's

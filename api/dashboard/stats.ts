@@ -25,6 +25,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     newSellExchange30d,
     enquiriesBySource,
     repairsByStatus,
+    customerCount,
+    newCustomers30d,
   ] = await Promise.all([
     prisma.product.count(),
     prisma.product.count({ where: { published: true } }),
@@ -40,6 +42,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     prisma.sellExchangeLead.count({ where: { createdAt: { gte: since30 } } }),
     prisma.enquiry.groupBy({ by: ["source"], _count: { _all: true } }),
     prisma.repairRequest.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.customer.count(),
+    prisma.customer.count({ where: { createdAt: { gte: since30 } } }),
   ])
 
   const totalLeads30d = newEnquiries30d + newCorporate30d + newRepairs30d + newSellExchange30d
@@ -54,6 +58,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       sellExchangeLeads: sellExchangeCount,
       last30Days: totalLeads30d,
     },
+    customers: { total: customerCount, last30Days: newCustomers30d },
     enquiriesBySource: enquiriesBySource.map((e) => ({ source: e.source, count: e._count._all })),
     repairsByStatus: repairsByStatus.map((r) => ({ status: r.status, count: r._count._all })),
   })

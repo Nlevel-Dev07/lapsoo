@@ -109,8 +109,13 @@ export interface RepairBookingPayload {
   email?: string
   city?: string
   location?: string
+  deviceCategory: string
+  brand: string
+  condition: string
   device: string
   serialNumber?: string
+  password?: string
+  accessories: string[]
   issueType: string
   message?: string
   mediaUrls: string[]
@@ -176,6 +181,41 @@ export function customerMe() {
   return request<CustomerSession>("/auth/customer-me")
 }
 
+export interface CustomerProfile {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  createdAt: string
+}
+
+export function fetchCustomerProfile() {
+  return request<CustomerProfile>("/auth/customer-profile")
+}
+
+export function updateCustomerProfile(payload: { name: string; phone?: string }) {
+  return request<CustomerProfile>("/auth/customer-profile", { method: "PATCH", body: JSON.stringify(payload) })
+}
+
+export function changeCustomerPassword(payload: { currentPassword: string; newPassword: string }) {
+  return request<{ ok: true }>("/auth/customer-change-password", { method: "POST", body: JSON.stringify(payload) })
+}
+
+export interface MyRepairRequest {
+  id: string
+  trackingCode: string
+  status: RepairStatus
+  device: string
+  issueType: string
+  message: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export function fetchMyRepairRequests() {
+  return request<MyRepairRequest[]>("/repair-requests/mine")
+}
+
 // ---------- Admin: auth ----------
 
 export interface AdminSession {
@@ -209,6 +249,7 @@ export interface DashboardStats {
     sellExchangeLeads: number
     last30Days: number
   }
+  customers: { total: number; last30Days: number }
   enquiriesBySource: { source: string; count: number }[]
   repairsByStatus: { status: string; count: number }[]
 }
@@ -321,24 +362,75 @@ export function deleteCorporateLead(id: string) {
   return request<void>(`/corporate-leads/${id}`, { method: "DELETE" })
 }
 
+export interface Technician {
+  id: string
+  name: string
+  phone: string | null
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export function fetchTechnicians() {
+  return request<Technician[]>("/technicians")
+}
+export function createTechnician(payload: { name: string; phone?: string }) {
+  return request<Technician>("/technicians", { method: "POST", body: JSON.stringify(payload) })
+}
+export function updateTechnician(id: string, payload: Partial<{ name: string; phone: string; active: boolean }>) {
+  return request<Technician>(`/technicians/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
+}
+
 export function fetchRepairRequests() {
   return request<any[]>("/repair-requests")
 }
 export function updateRepairStatus(id: string, status: RepairStatus) {
   return request(`/repair-requests/${id}`, { method: "PATCH", body: JSON.stringify({ status }) })
 }
+export function updateRepairRequest(
+  id: string,
+  payload: Partial<{ status: RepairStatus; estimateAmount: number | null; technicianId: string | null }>
+) {
+  return request(`/repair-requests/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
+}
 export function deleteRepairRequest(id: string) {
   return request<void>(`/repair-requests/${id}`, { method: "DELETE" })
 }
 
-export function fetchSellExchangeLeads() {
-  return request<any[]>("/sell-exchange")
+export type SellExchangeType = "SELL" | "EXCHANGE"
+
+export function fetchSellExchangeLeads(params?: { type?: SellExchangeType }) {
+  const qs = new URLSearchParams()
+  if (params?.type) qs.set("type", params.type)
+  const query = qs.toString()
+  return request<any[]>(`/sell-exchange${query ? `?${query}` : ""}`)
 }
 export function updateSellExchangeStatus(id: string, status: LeadStatus) {
   return request(`/sell-exchange/${id}`, { method: "PATCH", body: JSON.stringify({ status }) })
 }
 export function deleteSellExchangeLead(id: string) {
   return request<void>(`/sell-exchange/${id}`, { method: "DELETE" })
+}
+
+// ---------- Admin: customers ----------
+
+export interface AdminCustomer {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  active: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  _count: { repairRequests: number }
+}
+
+export function fetchAdminCustomers() {
+  return request<AdminCustomer[]>("/admin/customers")
+}
+
+export function updateAdminCustomer(id: string, payload: Partial<{ active: boolean; newPassword: string }>) {
+  return request<AdminCustomer>(`/admin/customers/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
 }
 
 // ---------- Admin: image upload ----------

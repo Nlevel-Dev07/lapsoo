@@ -56,10 +56,16 @@ export default function Blog() {
                       to={`/blog/${post.slug}`}
                       className="group block h-full rounded-3xl border border-ink/8 bg-white overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-500"
                     >
-                      <div
-                        className="aspect-[16/9]"
-                        style={{ background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})` }}
-                      />
+                      {post.coverImage ? (
+                        <div className="aspect-[16/9]">
+                          <img src={post.coverImage} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div
+                          className="aspect-[16/9]"
+                          style={{ background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})` }}
+                        />
+                      )}
                       <div className="p-6">
                         <div className="flex items-center gap-2 text-xs text-ink/40 font-semibold uppercase tracking-wide">
                           <span className="text-blue-600">{post.category}</span>

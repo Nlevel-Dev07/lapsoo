@@ -5,7 +5,9 @@ import { withHandler, methodGuard } from "../_lib/handler"
 import { requireAdmin } from "../_lib/auth"
 
 const schema = z.object({
-  status: z.enum(["BOOKED", "DIAGNOSING", "IN_PROGRESS", "WAITING_FOR_PARTS", "COMPLETED", "DELIVERED", "CANCELLED"]),
+  status: z.enum(["BOOKED", "DIAGNOSING", "IN_PROGRESS", "WAITING_FOR_PARTS", "COMPLETED", "DELIVERED", "CANCELLED"]).optional(),
+  estimateAmount: z.number().int().nonnegative().nullable().optional(),
+  technicianId: z.string().nullable().optional(),
 })
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
@@ -17,10 +19,14 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method === "PATCH") {
     const parsed = schema.safeParse(req.body)
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid status" })
+      res.status(400).json({ error: "Invalid repair update" })
       return
     }
-    const repair = await prisma.repairRequest.update({ where: { id }, data: { status: parsed.data.status } })
+    const repair = await prisma.repairRequest.update({
+      where: { id },
+      data: parsed.data,
+      include: { technician: true },
+    })
     res.status(200).json(repair)
     return
   }

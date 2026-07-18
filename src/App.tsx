@@ -12,6 +12,7 @@ import Blog from "@/pages/Blog"
 import BlogPost from "@/pages/BlogPost"
 import SellExchange from "@/pages/SellExchange"
 import Login from "@/pages/Login"
+import Account from "@/pages/Account"
 import NotFound from "@/pages/NotFound"
 
 import { ProtectedRoute } from "@/admin/ProtectedRoute"
@@ -24,6 +25,10 @@ import AdminProductsBulkImport from "@/admin/pages/ProductsBulkImport"
 import AdminBlog from "@/admin/pages/Blog"
 import AdminBlogForm from "@/admin/pages/BlogForm"
 import AdminLeads from "@/admin/pages/Leads"
+import AdminRepair from "@/admin/pages/Repair"
+import AdminSell from "@/admin/pages/Sell"
+import AdminExchange from "@/admin/pages/Exchange"
+import AdminCustomers from "@/admin/pages/Customers"
 
 function App() {
   return (
@@ -42,6 +47,7 @@ function App() {
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/sell-exchange" element={<SellExchange />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/account" element={<Account />} />
           <Route path="*" element={<NotFound />} />
         </Route>
 
@@ -57,6 +63,10 @@ function App() {
             <Route path="/admin/blog/new" element={<AdminBlogForm />} />
             <Route path="/admin/blog/:id/edit" element={<AdminBlogForm />} />
             <Route path="/admin/leads" element={<AdminLeads />} />
+            <Route path="/admin/repair" element={<AdminRepair />} />
+            <Route path="/admin/sell" element={<AdminSell />} />
+            <Route path="/admin/exchange" element={<AdminExchange />} />
+            <Route path="/admin/customers" element={<AdminCustomers />} />
           </Route>
         </Route>
       </Routes>

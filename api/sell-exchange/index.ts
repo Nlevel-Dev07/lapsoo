@@ -5,6 +5,7 @@ import { withHandler, methodGuard } from "../_lib/handler"
 import { requireAdmin } from "../_lib/auth"
 
 const schema = z.object({
+  type: z.enum(["SELL", "EXCHANGE"]),
   name: z.string().min(2),
   phone: z.string().regex(/^[6-9]\d{9}$/),
   email: z.string().email().optional().or(z.literal("")),
@@ -32,9 +33,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method === "GET") {
     const session = requireAdmin(req, res)
     if (!session) return
-    const { status } = req.query
+    const { status, type } = req.query
     const where: Record<string, unknown> = {}
     if (typeof status === "string") where.status = status
+    if (typeof type === "string") where.type = type
     const leads = await prisma.sellExchangeLead.findMany({ where, orderBy: { createdAt: "desc" } })
     res.status(200).json(leads)
     return

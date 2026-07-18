@@ -4,13 +4,13 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, X, Plus } from "lucide-react"
+import { ChevronLeft, X, Plus, UploadCloud, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { fetchBlogPostById, createBlogPost, updateBlogPost, ApiError } from "@/lib/api"
+import { fetchBlogPostById, createBlogPost, updateBlogPost, uploadImage, ApiError } from "@/lib/api"
 
 const schema = z.object({
   slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
@@ -30,6 +30,8 @@ export default function BlogForm() {
   const queryClient = useQueryClient()
 
   const [paragraphs, setParagraphs] = useState<string[]>([""])
+  const [coverImage, setCoverImage] = useState<string | undefined>(undefined)
+  const [uploading, setUploading] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const { data: existing } = useQuery({
@@ -60,13 +62,27 @@ export default function BlogForm() {
         published: existing.published,
       })
       setParagraphs(existing.content.length ? existing.content : [""])
+      setCoverImage(existing.coverImage ?? undefined)
     }
   }, [existing, reset])
+
+  const handleCoverUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(files[0])
+      setCoverImage(url)
+    } catch {
+      setServerError("Image upload failed. Check Cloudinary configuration.")
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const content = paragraphs.map((p) => p.trim()).filter(Boolean)
-      const payload = { ...data, content }
+      const payload = { ...data, content, coverImage }
       if (isEdit) return updateBlogPost(id as string, payload)
       return createBlogPost(payload)
     },
@@ -130,6 +146,28 @@ export default function BlogForm() {
             <Textarea id="excerpt" placeholder="A short summary shown on the blog listing page..." {...register("excerpt")} />
             {errors.excerpt && <p className="mt-1 text-xs text-red-500">{errors.excerpt.message}</p>}
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-ink/8 bg-white p-6 space-y-4">
+          <h3 className="font-semibold text-sm text-ink/60 uppercase tracking-wide">Cover Image</h3>
+          {coverImage ? (
+            <div className="relative aspect-video max-w-sm rounded-lg overflow-hidden bg-paper-soft">
+              <img src={coverImage} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setCoverImage(undefined)}
+                className="absolute top-1.5 right-1.5 h-6 w-6 flex items-center justify-center rounded-full bg-black/60 text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink/15 p-8 text-sm text-ink/45 cursor-pointer hover:border-blue-400 hover:text-blue-500 transition-colors">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+              {uploading ? "Uploading..." : "Click to upload cover image (Cloudinary)"}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCoverUpload(e.target.files)} />
+            </label>
+          )}
         </section>
 
         <section className="rounded-2xl border border-ink/8 bg-white p-6 space-y-4">

@@ -7,6 +7,7 @@ export interface BlogPost {
   date: string
   gradientFrom?: string
   gradientTo?: string
+  coverImage?: string
   content: string[]
 }
 

@@ -14,9 +14,10 @@ const nav = [
     to: "/laptopbazaar",
     desc: "Brand New Laptops",
     badge: "New",
-    badgeColor: "bg-blue-500",
+    badgeColor: "bg-[#091739]",
     children: [
       { label: "Business Laptops", to: "/laptopbazaar?category=Business" },
+      { label: "Student Laptops", to: "/laptopbazaar?category=Student" },
       { label: "Gaming Laptops", to: "/laptopbazaar?category=Gaming" },
       { label: "MacBooks", to: "/laptopbazaar?category=MacBook" },
       { label: "Workstations", to: "/laptopbazaar?category=Workstation" },
@@ -28,13 +29,13 @@ const nav = [
     to: "/lapandtop",
     desc: "Certified Refurbished",
     badge: "Refurbished",
-    badgeColor: "bg-emerald-500",
+    badgeColor: "bg-[#091739]",
     children: [
       { label: "Business Laptops", to: "/lapandtop?category=Business" },
       { label: "Student Laptops", to: "/lapandtop?category=Student" },
       { label: "Gaming Laptops", to: "/lapandtop?category=Gaming" },
-      { label: "Workstations", to: "/lapandtop?category=Workstation" },
       { label: "MacBooks", to: "/lapandtop?category=MacBook" },
+      { label: "Workstations", to: "/lapandtop?category=Workstation" },
       { label: "Sell / Exchange", to: "/sell-exchange" },
     ],
   },
@@ -43,7 +44,7 @@ const nav = [
     to: "/laptech",
     desc: "Repair & Upgrades",
     badge: "Repair",
-    badgeColor: "bg-amber-500",
+    badgeColor: "bg-[#091739]",
   },
   { label: "Corporate", to: "/corporate" },
   { label: "About", to: "/about" },
@@ -169,6 +170,12 @@ export function Header() {
                 </button>
                 <div className="absolute right-0 top-full pt-2 opacity-0 invisible translate-y-1 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 ease-out">
                   <div className="w-44 rounded-2xl border border-ink/8 bg-white shadow-xl p-2">
+                    <Link
+                      to="/account"
+                      className="flex w-full items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-medium text-ink/70 transition-all duration-200 hover:bg-ink/[0.04] hover:text-ink"
+                    >
+                      <User className="h-4 w-4" /> My Profile
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="flex w-full items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-medium text-ink/70 transition-all duration-200 hover:bg-ink/[0.04] hover:text-ink"
@@ -258,6 +265,11 @@ export function Header() {
                   </Link>
                 )}
               </div>
+              {isAuthenticated && (
+                <Link to="/account" className="mt-2" onClick={() => setOpen(false)}>
+                  <Button variant="outline" className="w-full transition-transform duration-200 active:scale-95">My Profile</Button>
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

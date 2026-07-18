@@ -62,10 +62,16 @@ export default function BlogPost() {
           </div>
         </motion.div>
 
-        <div
-          className="mt-10 aspect-[16/8] rounded-3xl"
-          style={{ background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})` }}
-        />
+        {post.coverImage ? (
+          <div className="mt-10 aspect-[16/8] rounded-3xl overflow-hidden">
+            <img src={post.coverImage} alt="" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div
+            className="mt-10 aspect-[16/8] rounded-3xl"
+            style={{ background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})` }}
+          />
+        )}
 
         <div className="mt-10 space-y-6">
           {post.content.map((para, i) => (
@@ -88,7 +94,13 @@ export default function BlogPost() {
               const g = p.gradientFrom && p.gradientTo ? { from: p.gradientFrom, to: p.gradientTo } : productGradient(p.slug)
               return (
                 <Link key={p.slug} to={`/blog/${p.slug}`} className="group block rounded-2xl border border-ink/8 bg-white overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="aspect-[16/9]" style={{ background: `linear-gradient(135deg, ${g.from}, ${g.to})` }} />
+                  {p.coverImage ? (
+                    <div className="aspect-[16/9]">
+                      <img src={p.coverImage} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="aspect-[16/9]" style={{ background: `linear-gradient(135deg, ${g.from}, ${g.to})` }} />
+                  )}
                   <div className="p-5">
                     <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">{p.category}</p>
                     <h4 className="mt-2 font-semibold text-sm leading-snug group-hover:text-blue-600 transition-colors">{p.title}</h4>

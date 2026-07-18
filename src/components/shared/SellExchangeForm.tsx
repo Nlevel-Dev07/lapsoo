@@ -12,6 +12,7 @@ import { MediaUploadField, emptyMediaSlots, type MediaSlots } from "@/components
 import { submitSellExchange, ApiError } from "@/lib/api"
 
 const schema = z.object({
+  type: z.enum(["SELL", "EXCHANGE"], { message: "Select whether you want to sell or exchange" }),
   name: z.string().min(2, "Please enter your full name"),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
   email: z.string().email("Enter a valid email").optional().or(z.literal("")),
@@ -32,8 +33,11 @@ export function SellExchangeForm() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { city: "Gurgaon" } })
+
+  const typeValue = watch("type")
 
   const onSubmit = async (data: FormValues) => {
     setServerError(null)
@@ -64,6 +68,24 @@ export function SellExchangeForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <h3 className="font-display text-xl font-bold">Get Your Laptop Valuation</h3>
       <p className="text-sm text-ink/55 -mt-3">Share your laptop details for a quick estimate — no obligation to sell.</p>
+
+      <div>
+        <Label>I want to *</Label>
+        <div className="flex gap-4 mt-1.5">
+          {(["SELL", "EXCHANGE"] as const).map((option) => (
+            <label
+              key={option}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold cursor-pointer transition-colors ${
+                typeValue === option ? "border-blue-500 bg-blue-50 text-blue-700" : "border-ink/12 text-ink/60"
+              }`}
+            >
+              <input type="radio" value={option} className="sr-only" {...register("type")} />
+              {option === "SELL" ? "Sell" : "Exchange"}
+            </label>
+          ))}
+        </div>
+        {errors.type && <p className="mt-1 text-xs text-red-500">{errors.type.message}</p>}
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-5">
         <div>

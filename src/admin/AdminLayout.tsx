@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Laptop, Newspaper, Inbox, LogOut } from "lucide-react"
+import { LayoutDashboard, Laptop, Newspaper, Inbox, Wrench, Wallet, RefreshCw, Users, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { adminLogout } from "@/lib/api"
 import { useAdminAuth } from "./useAdminAuth"
@@ -9,6 +9,10 @@ const nav = [
   { to: "/admin/products", label: "Products", icon: Laptop },
   { to: "/admin/blog", label: "Blog", icon: Newspaper },
   { to: "/admin/leads", label: "Leads", icon: Inbox },
+  { to: "/admin/repair", label: "Repair", icon: Wrench },
+  { to: "/admin/sell", label: "Sell", icon: Wallet },
+  { to: "/admin/exchange", label: "Exchange", icon: RefreshCw },
+  { to: "/admin/customers", label: "Customers", icon: Users },
 ]
 
 export function AdminLayout() {

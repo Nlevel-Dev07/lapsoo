@@ -18,13 +18,19 @@ const schema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
   email: z.string().email("Enter a valid email").optional().or(z.literal("")),
   city: z.literal("Gurgaon"),
+  deviceCategory: z.enum(["Laptop", "Monitor", "All in One", "Desktop", "Printer", "Other"], { message: "Select a device category" }),
+  brand: z.enum(["Dell", "Lenovo", "ASUS", "Acer", "Apple", "HP", "Other"], { message: "Select a brand" }),
+  condition: z.enum(["Like New", "Medium", "Scratched"], { message: "Select the device condition" }),
   device: z.string().min(1, "Device brand & model is required"),
   serialNumber: z.string().optional(),
+  password: z.string().optional(),
   issueType: z.enum(["Screen", "Battery", "Keyboard", "SSD/RAM Upgrade", "Motherboard", "Data Recovery", "Other"]),
   message: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
+
+const ACCESSORY_OPTIONS = ["Adaptor", "Powercord", "Other"] as const
 
 export function RepairBookingForm() {
   const { isAuthenticated, isLoading: authLoading } = useCustomerAuth()
@@ -35,11 +41,16 @@ export function RepairBookingForm() {
   const [location, setLocation] = useState("")
   const [locationError, setLocationError] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
+  const [accessories, setAccessories] = useState<string[]>([])
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { city: "Gurgaon" } })
+
+  const toggleAccessory = (option: string) => {
+    setAccessories((prev) => (prev.includes(option) ? prev.filter((a) => a !== option) : [...prev, option]))
+  }
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) return
@@ -74,6 +85,7 @@ export function RepairBookingForm() {
       const res = await submitRepairBooking({
         ...data,
         location,
+        accessories,
         mediaUrls: [mediaSlots.front, mediaSlots.back, mediaSlots.open, mediaSlots.video],
       })
       setTrackingCode(res.trackingCode)
@@ -139,29 +151,70 @@ export function RepairBookingForm() {
           <Label htmlFor="city">City *</Label>
           <Input id="city" readOnly value="Gurgaon" {...register("city")} />
         </div>
-        <div>
-          <Label htmlFor="serialNumber">Device Serial Number / Service Tag</Label>
-          <Input id="serialNumber" placeholder="e.g. 5CD1234ABC" {...register("serialNumber")} />
+      </div>
+
+      <div>
+        <Label htmlFor="location">Exact / Current Location *</Label>
+        <div className="flex gap-2">
+          <Input
+            id="location"
+            placeholder="Address, landmark, or use current location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+          <Button type="button" variant="outline" onClick={useCurrentLocation} disabled={locating}>
+            <LocateFixed className="h-4 w-4" /> {locating ? "Locating..." : "Use Current"}
+          </Button>
         </div>
-        <div className="sm:col-span-2">
-          <Label htmlFor="location">Exact / Current Location *</Label>
-          <div className="flex gap-2">
-            <Input
-              id="location"
-              placeholder="Address, landmark, or use current location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-            <Button type="button" variant="outline" onClick={useCurrentLocation} disabled={locating}>
-              <LocateFixed className="h-4 w-4" /> {locating ? "Locating..." : "Use Current"}
-            </Button>
-          </div>
-          {locationError && <p className="mt-1 text-xs text-red-500">{locationError}</p>}
+        {locationError && <p className="mt-1 text-xs text-red-500">{locationError}</p>}
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-5">
+        <div>
+          <Label htmlFor="deviceCategory">Device Category *</Label>
+          <Select id="deviceCategory" defaultValue="" {...register("deviceCategory")}>
+            <option value="" disabled>Select device category</option>
+            <option value="Laptop">Laptop</option>
+            <option value="Monitor">Monitor</option>
+            <option value="All in One">All in One</option>
+            <option value="Desktop">Desktop</option>
+            <option value="Printer">Printer</option>
+            <option value="Other">Other</option>
+          </Select>
+          {errors.deviceCategory && <p className="mt-1 text-xs text-red-500">{errors.deviceCategory.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="brand">Brand *</Label>
+          <Select id="brand" defaultValue="" {...register("brand")}>
+            <option value="" disabled>Select brand</option>
+            <option value="Dell">Dell</option>
+            <option value="Lenovo">Lenovo</option>
+            <option value="ASUS">ASUS</option>
+            <option value="Acer">Acer</option>
+            <option value="Apple">Apple</option>
+            <option value="HP">HP</option>
+            <option value="Other">Other</option>
+          </Select>
+          {errors.brand && <p className="mt-1 text-xs text-red-500">{errors.brand.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="condition">Condition *</Label>
+          <Select id="condition" defaultValue="" {...register("condition")}>
+            <option value="" disabled>Select condition</option>
+            <option value="Like New">Like New</option>
+            <option value="Medium">Medium</option>
+            <option value="Scratched">Scratched</option>
+          </Select>
+          {errors.condition && <p className="mt-1 text-xs text-red-500">{errors.condition.message}</p>}
         </div>
         <div>
           <Label htmlFor="device">Device Brand & Model *</Label>
           <Input id="device" placeholder="e.g. Dell Latitude 5420" {...register("device")} />
           {errors.device && <p className="mt-1 text-xs text-red-500">{errors.device.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="serialNumber">Device Serial Number / Service Tag</Label>
+          <Input id="serialNumber" placeholder="e.g. 5CD1234ABC" {...register("serialNumber")} />
         </div>
         <div>
           <Label htmlFor="issueType">Issue Type *</Label>
@@ -176,6 +229,27 @@ export function RepairBookingForm() {
             <option value="Other">Other</option>
           </Select>
           {errors.issueType && <p className="mt-1 text-xs text-red-500">{errors.issueType.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="password">Device Password (if any)</Label>
+          <Input id="password" type="password" placeholder="Login / BIOS password" {...register("password")} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Accessories Handed Over</Label>
+        <div className="flex flex-wrap gap-4 mt-1.5">
+          {ACCESSORY_OPTIONS.map((option) => (
+            <label key={option} className="flex items-center gap-2 text-sm text-ink/70">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={accessories.includes(option)}
+                onChange={() => toggleAccessory(option)}
+              />
+              {option}
+            </label>
+          ))}
         </div>
       </div>
 
