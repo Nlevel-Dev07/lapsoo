@@ -3,7 +3,6 @@ import { z } from "zod"
 import { prisma } from "../_lib/prisma"
 import { withHandler, methodGuard } from "../_lib/handler"
 import { requireMenu } from "../_lib/auth"
-import { getCustomerSession } from "../_lib/customerAuth"
 
 const schema = z.object({
   name: z.string().min(2),
@@ -21,6 +20,7 @@ const schema = z.object({
   issueType: z.enum(["Screen", "Battery", "Keyboard", "SSD/RAM Upgrade", "Motherboard", "Data Recovery", "Other"]),
   message: z.string().optional(),
   mediaUrls: z.array(z.string().url()).min(4, "Front, back, open, and video are all required"),
+  store: z.string().min(1, "Select a store"),
 })
 
 function generateTrackingCode() {
@@ -29,39 +29,27 @@ function generateTrackingCode() {
 }
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
-  if (req.method === "POST") {
-    const parsed = schema.safeParse(req.body)
-    if (!parsed.success) {
-      res.status(400).json({ error: "Invalid repair booking data", details: parsed.error.flatten() })
-      return
-    }
-    const { email, ...rest } = parsed.data
-    const customerSession = getCustomerSession(req)
+  if (!methodGuard(req, res, ["POST"])) return
 
-    let trackingCode = generateTrackingCode()
-    for (let i = 0; i < 5; i++) {
-      const exists = await prisma.repairRequest.findUnique({ where: { trackingCode } })
-      if (!exists) break
-      trackingCode = generateTrackingCode()
-    }
+  const session = requireMenu(req, res, "repair")
+  if (!session) return
 
-    const repair = await prisma.repairRequest.create({
-      data: { ...rest, email: email || undefined, trackingCode, customerId: customerSession?.id },
-    })
-    res.status(201).json({ id: repair.id, trackingCode: repair.trackingCode })
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid jobsheet data", details: parsed.error.flatten() })
     return
   }
+  const { email, ...rest } = parsed.data
 
-  if (req.method === "GET") {
-    const session = requireMenu(req, res, "repair")
-    if (!session) return
-    const { status } = req.query
-    const where: Record<string, unknown> = {}
-    if (typeof status === "string") where.status = status
-    const repairs = await prisma.repairRequest.findMany({ where, orderBy: { createdAt: "desc" }, include: { assignedTo: true } })
-    res.status(200).json(repairs)
-    return
+  let trackingCode = generateTrackingCode()
+  for (let i = 0; i < 5; i++) {
+    const exists = await prisma.repairRequest.findUnique({ where: { trackingCode } })
+    if (!exists) break
+    trackingCode = generateTrackingCode()
   }
 
-  methodGuard(req, res, ["GET", "POST"])
+  const repair = await prisma.repairRequest.create({
+    data: { ...rest, email: email || undefined, trackingCode, type: "WALK_IN", createdByName: session.name },
+  })
+  res.status(201).json({ id: repair.id, trackingCode: repair.trackingCode })
 })

@@ -5,12 +5,14 @@ import { hashPassword } from "../_lib/customerAuth"
 import { withHandler, methodGuard } from "../_lib/handler"
 import { isRateLimited } from "../_lib/rateLimit"
 import { createAndSendVerification } from "../_lib/customerVerification"
+import { verifyTurnstileToken } from "../_lib/turnstile"
 
 const schema = z.object({
   name: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  turnstileToken: z.string().min(1, "Please complete the security check"),
 })
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
@@ -26,7 +28,15 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid signup data" })
     return
   }
-  const { name, email, phone, password } = parsed.data
+  const { name, email, phone, password, turnstileToken } = parsed.data
+
+  const forwarded = req.headers["x-forwarded-for"]
+  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(",")[0].trim() ?? req.socket?.remoteAddress
+  const humanVerified = await verifyTurnstileToken(turnstileToken, ip)
+  if (!humanVerified) {
+    res.status(400).json({ error: "Security check failed. Please try again." })
+    return
+  }
 
   const existing = await prisma.customer.findUnique({ where: { email } })
   if (existing) {

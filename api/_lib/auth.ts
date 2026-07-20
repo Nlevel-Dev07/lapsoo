@@ -12,6 +12,9 @@ export interface AdminSession {
   email: string
   name: string
   role: string
+  type: "admin" | "team"
+  // null/undefined = unrestricted (AdminUser). An array restricts the sidebar/routes to those menu keys.
+  menuKeys: string[] | null
 }
 
 export async function hashPassword(password: string) {
@@ -73,6 +76,18 @@ export function requireAdmin(req: VercelRequest, res: VercelResponse): AdminSess
   const session = getSession(req)
   if (!session) {
     res.status(401).json({ error: "Unauthorized" })
+    return null
+  }
+  return session
+}
+
+// Like requireAdmin, but also enforces that a "team" session has the given menu key.
+// AdminUser sessions (menuKeys === null) always pass.
+export function requireMenu(req: VercelRequest, res: VercelResponse, key: string): AdminSession | null {
+  const session = requireAdmin(req, res)
+  if (!session) return null
+  if (session.menuKeys && !session.menuKeys.includes(key)) {
+    res.status(403).json({ error: "Forbidden" })
     return null
   }
   return session

@@ -8,6 +8,7 @@ import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ShieldCheck, Wrench, Spa
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Turnstile } from "@/components/shared/Turnstile"
 import { cn } from "@/lib/utils"
 import {
   customerLogin,
@@ -62,6 +63,8 @@ export default function Login() {
   const [resending, setResending] = useState(false)
   const [resendMessage, setResendMessage] = useState<string | null>(null)
   const [captcha, setCaptcha] = useState<LoginCaptcha | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileKey, setTurnstileKey] = useState(0)
 
   useSeo({
     title: mode === "login" ? "Login" : "Sign Up",
@@ -109,11 +112,17 @@ export default function Login() {
 
   const onSignup = async (data: SignupValues) => {
     setServerError(null)
+    if (!turnstileToken) {
+      setServerError("Please complete the security check.")
+      return
+    }
     try {
-      await customerSignup(data)
+      await customerSignup({ ...data, turnstileToken })
       setVerifyEmail(data.email)
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : "Signup failed. Please try again.")
+      setTurnstileToken(null)
+      setTurnstileKey((k) => k + 1)
     }
   }
 
@@ -154,6 +163,8 @@ export default function Login() {
     setVerifyEmail(null)
     setVerifyCode("")
     setResendMessage(null)
+    setTurnstileToken(null)
+    setTurnstileKey((k) => k + 1)
   }
 
   const step = verifyEmail ? "verify" : mode
@@ -394,8 +405,15 @@ export default function Login() {
                         <p className="mt-1 text-xs text-red-500">{signupForm.formState.errors.password.message}</p>
                       )}
                     </div>
+                    <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={() => setTurnstileToken(null)} />
                     {serverError && <p className="text-sm text-red-500">{serverError}</p>}
-                    <Button type="submit" variant="accent" size="lg" className="w-full" disabled={signupForm.formState.isSubmitting}>
+                    <Button
+                      type="submit"
+                      variant="accent"
+                      size="lg"
+                      className="w-full"
+                      disabled={signupForm.formState.isSubmitting || !turnstileToken}
+                    >
                       {signupForm.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {signupForm.formState.isSubmitting ? "Creating account..." : "Create Account"}
                     </Button>

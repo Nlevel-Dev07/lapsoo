@@ -77,6 +77,11 @@ enum CustomerCodePurpose {
   PASSWORD_RESET
 }
 
+enum RepairType {
+  WALK_IN
+  ONLINE
+}
+
 // ---------- Core catalog ----------
 
 model Brand {
@@ -206,15 +211,19 @@ model RepairRequest {
   issueType      String
   message        String?      @db.Text
   mediaUrls      Json         @default("[]")
-  estimateAmount Int?
-  technicianId   String?
-  technician     Technician?  @relation(fields: [technicianId], references: [id])
+  estimateCost   Int?
+  estimateTime   String?
+  type           RepairType   @default(ONLINE)
+  store          String?
+  createdByName  String?
+  assignedToId   String?
+  assignedTo     TeamMember?  @relation(fields: [assignedToId], references: [id])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([status])
   @@index([customerId])
-  @@index([technicianId])
+  @@index([assignedToId])
 }
 
 model SellExchangeLead {
@@ -236,14 +245,32 @@ model SellExchangeLead {
   @@index([type, status])
 }
 
-model Technician {
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  menuKeys    Json         @default("[]")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  teamMembers TeamMember[]
+}
+
+model TeamMember {
   id             String          @id @default(cuid())
   name           String
+  email          String?         @unique
   phone          String?
+  passwordHash   String?
+  designation    String?
+  store          String?
+  roleId         String?
+  role           Role?           @relation(fields: [roleId], references: [id])
   active         Boolean         @default(true)
+  lastLoginAt    DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   repairRequests RepairRequest[]
+
+  @@index([roleId])
 }
 
 // ---------- Customers ----------

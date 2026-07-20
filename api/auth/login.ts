@@ -20,21 +20,44 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { email, password } = parsed.data
 
   const admin = await prisma.adminUser.findUnique({ where: { email } })
-  if (!admin || !admin.active) {
+  if (admin && admin.active) {
+    const valid = await verifyPassword(password, admin.passwordHash)
+    if (!valid) {
+      res.status(401).json({ error: "Invalid credentials" })
+      return
+    }
+
+    await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } })
+
+    const session = { id: admin.id, email: admin.email, name: admin.name, role: admin.role, type: "admin" as const, menuKeys: null }
+    setSessionCookie(res, signSession(session))
+    res.status(200).json(session)
+    return
+  }
+
+  const member = await prisma.teamMember.findUnique({ where: { email }, include: { role: true } })
+  if (!member || !member.active || !member.passwordHash) {
     res.status(401).json({ error: "Invalid credentials" })
     return
   }
 
-  const valid = await verifyPassword(password, admin.passwordHash)
+  const valid = await verifyPassword(password, member.passwordHash)
   if (!valid) {
     res.status(401).json({ error: "Invalid credentials" })
     return
   }
 
-  await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } })
+  await prisma.teamMember.update({ where: { id: member.id }, data: { lastLoginAt: new Date() } })
 
-  const token = signSession({ id: admin.id, email: admin.email, name: admin.name, role: admin.role })
-  setSessionCookie(res, token)
-
-  res.status(200).json({ id: admin.id, email: admin.email, name: admin.name, role: admin.role })
+  const menuKeys = Array.isArray(member.role?.menuKeys) ? (member.role!.menuKeys as string[]) : []
+  const session = {
+    id: member.id,
+    email: member.email!,
+    name: member.name,
+    role: member.role?.name ?? "",
+    type: "team" as const,
+    menuKeys,
+  }
+  setSessionCookie(res, signSession(session))
+  res.status(200).json(session)
 })
