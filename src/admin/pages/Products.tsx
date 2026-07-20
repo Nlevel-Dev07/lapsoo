@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Pencil, Eye, EyeOff, UploadCloud, Search, ImageOff, Trash2 } from "lucide-react"
+import { Plus, Pencil, Eye, EyeOff, UploadCloud, Search, ImageOff, Trash2, Package, CheckCircle2, EyeOff as EyeOffIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { LeadTable, DeleteButton } from "@/admin/components/LeadTable"
+import { PageHeader } from "@/admin/components/PageHeader"
+import { StatCard } from "@/admin/components/StatCard"
+import { useConfirm } from "@/admin/components/ConfirmDialog"
+import { useToast } from "@/admin/components/Toast"
 import { fetchProducts, deleteProduct, updateProduct } from "@/lib/api"
 import { formatPrice } from "@/data/products"
 
@@ -39,6 +43,8 @@ function RowCheckbox({
 
 export default function Products() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
+  const toast = useToast()
   const { data: products, isLoading } = useQuery({ queryKey: ["admin-products"], queryFn: () => fetchProducts() })
 
   const [search, setSearch] = useState("")
@@ -49,7 +55,11 @@ export default function Products() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-products"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] })
+      toast.success("Product deleted.")
+    },
+    onError: () => toast.error("Could not delete product."),
   })
 
   const bulkDeleteMutation = useMutation({
@@ -57,7 +67,9 @@ export default function Products() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] })
       setSelected(new Set())
+      toast.success("Selected products deleted.")
     },
+    onError: () => toast.error("Could not delete selected products."),
   })
 
   const togglePublish = useMutation({
@@ -103,44 +115,39 @@ export default function Products() {
     })
   }
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     const ids = Array.from(selected)
     if (ids.length === 0) return
-    if (confirm(`Delete ${ids.length} selected product${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) {
-      bulkDeleteMutation.mutate(ids)
-    }
+    const ok = await confirm({
+      title: `Delete ${ids.length} selected product${ids.length > 1 ? "s" : ""}?`,
+      description: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    })
+    if (ok) bulkDeleteMutation.mutate(ids)
   }
 
   return (
-    <div className="p-8 max-w-[1400px]">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Products</h1>
-          <p className="mt-1 text-sm text-ink/50">Manage your LapAndTop and LaptopBazaar catalog.</p>
-        </div>
-        <div className="flex gap-3">
-          <Link to="/admin/products/bulk-import">
-            <Button variant="outline"><UploadCloud className="h-4 w-4" /> Bulk Import</Button>
-          </Link>
-          <Link to="/admin/products/new">
-            <Button variant="accent"><Plus className="h-4 w-4" /> Add Product</Button>
-          </Link>
-        </div>
-      </div>
+    <div className="p-8 max-w-7xl">
+      <PageHeader
+        title="Products"
+        subtitle="Manage your LapAndTop and LaptopBazaar catalog."
+        actions={
+          <>
+            <Link to="/admin/products/bulk-import">
+              <Button variant="outline"><UploadCloud className="h-4 w-4" /> Bulk Import</Button>
+            </Link>
+            <Link to="/admin/products/new">
+              <Button variant="accent"><Plus className="h-4 w-4" /> Add Product</Button>
+            </Link>
+          </>
+        }
+      />
 
-      <div className="mt-6 grid grid-cols-3 gap-4 sm:max-w-md">
-        <div className="rounded-2xl border border-ink/8 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">Total</p>
-          <p className="mt-1.5 font-display text-2xl font-extrabold">{isLoading ? "—" : products?.length ?? 0}</p>
-        </div>
-        <div className="rounded-2xl border border-ink/8 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">Published</p>
-          <p className="mt-1.5 font-display text-2xl font-extrabold text-emerald-600">{isLoading ? "—" : publishedCount}</p>
-        </div>
-        <div className="rounded-2xl border border-ink/8 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">Hidden</p>
-          <p className="mt-1.5 font-display text-2xl font-extrabold text-ink/40">{isLoading ? "—" : hiddenCount}</p>
-        </div>
+      <div className="mt-6 grid grid-cols-3 gap-4 sm:max-w-lg">
+        <StatCard icon={Package} label="Total" value={products?.length ?? 0} />
+        <StatCard icon={CheckCircle2} label="Published" value={publishedCount} />
+        <StatCard icon={EyeOffIcon} label="Hidden" value={hiddenCount} />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -235,10 +242,14 @@ export default function Products() {
                 <Pencil className="h-4 w-4 text-ink/50" />
               </Link>
               <DeleteButton
-                onClick={() => {
-                  if (confirm(`Delete ${p.brand} ${p.model}? This cannot be undone.`)) {
-                    deleteMutation.mutate(p.id)
-                  }
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Delete ${p.brand} ${p.model}?`,
+                    description: "This cannot be undone.",
+                    confirmLabel: "Delete",
+                    danger: true,
+                  })
+                  if (ok) deleteMutation.mutate(p.id)
                 }}
               />
             </div>,

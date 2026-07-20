@@ -166,6 +166,7 @@ export interface CustomerSignupPayload {
   email: string
   phone: string
   password: string
+  turnstileToken: string
 }
 
 export interface CustomerSignupResult {
@@ -268,6 +269,8 @@ export interface AdminSession {
   email: string
   name: string
   role: string
+  type: "admin" | "team"
+  menuKeys: string[] | null
 }
 
 export function adminLogin(email: string, password: string) {
@@ -297,6 +300,7 @@ export interface DashboardStats {
   customers: { total: number; last30Days: number }
   enquiriesBySource: { source: string; count: number }[]
   repairsByStatus: { status: string; count: number }[]
+  leadsTrend: { date: string; count: number }[]
 }
 
 export function fetchDashboardStats() {
@@ -407,25 +411,6 @@ export function deleteCorporateLead(id: string) {
   return request<void>(`/corporate-leads/${id}`, { method: "DELETE" })
 }
 
-export interface Technician {
-  id: string
-  name: string
-  phone: string | null
-  active: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export function fetchTechnicians() {
-  return request<Technician[]>("/technicians")
-}
-export function createTechnician(payload: { name: string; phone?: string }) {
-  return request<Technician>("/technicians", { method: "POST", body: JSON.stringify(payload) })
-}
-export function updateTechnician(id: string, payload: Partial<{ name: string; phone: string; active: boolean }>) {
-  return request<Technician>(`/technicians/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
-}
-
 export function fetchRepairRequests() {
   return request<any[]>("/repair-requests")
 }
@@ -434,12 +419,26 @@ export function updateRepairStatus(id: string, status: RepairStatus) {
 }
 export function updateRepairRequest(
   id: string,
-  payload: Partial<{ status: RepairStatus; estimateAmount: number | null; technicianId: string | null }>
+  payload: Partial<{ status: RepairStatus; estimateCost: number | null; estimateTime: string | null; assignedToId: string | null }>
 ) {
   return request(`/repair-requests/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
 }
 export function deleteRepairRequest(id: string) {
   return request<void>(`/repair-requests/${id}`, { method: "DELETE" })
+}
+export function emailRepairJobsheet(id: string) {
+  return request<{ ok: true }>(`/repair-requests/${id}/email`, { method: "POST" })
+}
+
+export interface JobsheetPayload extends RepairBookingPayload {
+  store: string
+}
+
+export function createJobsheet(payload: JobsheetPayload) {
+  return request<{ id: string; trackingCode: string }>("/admin/jobsheets", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
 }
 
 export type SellExchangeType = "SELL" | "EXCHANGE"
@@ -487,6 +486,87 @@ export function updateAdminCustomer(
 
 export function deleteAdminCustomer(id: string) {
   return request<void>(`/admin/customers/${id}`, { method: "DELETE" })
+}
+
+// ---------- Admin: roles ----------
+
+export interface Role {
+  id: string
+  name: string
+  menuKeys: string[]
+  createdAt: string
+  updatedAt: string
+  _count?: { teamMembers: number }
+}
+
+export function fetchRoles() {
+  return request<Role[]>("/admin/roles")
+}
+export function createRole(payload: { name: string; menuKeys: string[] }) {
+  return request<Role>("/admin/roles", { method: "POST", body: JSON.stringify(payload) })
+}
+export function updateRole(id: string, payload: Partial<{ name: string; menuKeys: string[] }>) {
+  return request<Role>(`/admin/roles/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
+}
+export function deleteRole(id: string) {
+  return request<void>(`/admin/roles/${id}`, { method: "DELETE" })
+}
+
+// ---------- Admin: team ----------
+
+export interface TeamMember {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  designation: string | null
+  store: string | null
+  active: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  role: { id: string; name: string; menuKeys: string[] } | null
+}
+
+export function fetchTeamMembers() {
+  return request<TeamMember[]>("/admin/team")
+}
+export function createTeamMember(payload: {
+  name: string
+  email: string
+  phone?: string
+  designation?: string
+  store?: string
+  roleId?: string | null
+  password: string
+}) {
+  return request<TeamMember>("/admin/team", { method: "POST", body: JSON.stringify(payload) })
+}
+export function updateTeamMember(
+  id: string,
+  payload: Partial<{
+    name: string
+    email: string
+    phone: string
+    designation: string
+    store: string
+    roleId: string | null
+    active: boolean
+    newPassword: string
+  }>
+) {
+  return request<TeamMember>(`/admin/team/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
+}
+export function deleteTeamMember(id: string) {
+  return request<void>(`/admin/team/${id}`, { method: "DELETE" })
+}
+export function fetchDesignations() {
+  return request<string[]>("/admin/team/designations")
+}
+
+// ---------- Admin: settings ----------
+
+export function changeAdminPassword(payload: { currentPassword: string; newPassword: string }) {
+  return request<{ ok: true }>("/admin/change-password", { method: "POST", body: JSON.stringify(payload) })
 }
 
 // ---------- Admin: image upload ----------

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Pencil, X } from "lucide-react"
+import { Plus, Pencil, Users } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -13,9 +13,17 @@ import {
   type AdminCustomer,
 } from "@/lib/api"
 import { LeadTable, DeleteButton, fmtDate } from "@/admin/components/LeadTable"
+import { PageHeader } from "@/admin/components/PageHeader"
+import { StatCard } from "@/admin/components/StatCard"
+import { StatusBadge } from "@/admin/components/StatusBadge"
+import { Modal } from "@/components/dashboard/Modal"
+import { useConfirm } from "@/admin/components/ConfirmDialog"
+import { useToast } from "@/admin/components/Toast"
 
 export default function Customers() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [resetTarget, setResetTarget] = useState<AdminCustomer | null>(null)
   const [editTarget, setEditTarget] = useState<AdminCustomer | null>(null)
   const [adding, setAdding] = useState(false)
@@ -24,28 +32,32 @@ export default function Customers() {
   const toggleActive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateAdminCustomer(id, { active }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-customers"] }),
+    onError: () => toast.error("Could not update customer."),
   })
 
   const deleteCustomer = useMutation({
     mutationFn: (id: string) => deleteAdminCustomer(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-customers"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-customers"] })
+      toast.success("Customer deleted.")
+    },
+    onError: () => toast.error("Could not delete customer."),
   })
 
   return (
     <div className="p-8 max-w-6xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Customers</h1>
-          <p className="mt-1 text-sm text-ink/50">Everyone who has created a customer account on the site.</p>
-        </div>
-        <Button variant="accent" onClick={() => setAdding(true)}>
-          <Plus className="h-4 w-4" /> Add Customer
-        </Button>
-      </div>
+      <PageHeader
+        title="Customers"
+        subtitle="Everyone who has created a customer account on the site."
+        actions={
+          <Button variant="accent" onClick={() => setAdding(true)}>
+            <Plus className="h-4 w-4" /> Add Customer
+          </Button>
+        }
+      />
 
-      <div className="mt-6 rounded-2xl border border-ink/8 bg-white p-6 w-fit">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">Registered Customers</p>
-        <p className="mt-2 font-display text-3xl font-extrabold">{isLoading ? "—" : data?.length ?? 0}</p>
+      <div className="mt-6 sm:max-w-xs">
+        <StatCard icon={Users} label="Registered Customers" value={data?.length ?? 0} />
       </div>
 
       <div className="mt-6">
@@ -60,11 +72,8 @@ export default function Customers() {
             fmtDate(c.createdAt),
             c.lastLoginAt ? fmtDate(c.lastLoginAt) : "Never",
             c._count.repairRequests,
-            <button
-              onClick={() => toggleActive.mutate({ id: c.id, active: !c.active })}
-              className={`text-xs font-semibold px-3 py-1 rounded-full ${c.active ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}
-            >
-              {c.active ? "Active" : "Suspended"}
+            <button onClick={() => toggleActive.mutate({ id: c.id, active: !c.active })}>
+              <StatusBadge>{c.active ? "Active" : "Suspended"}</StatusBadge>
             </button>,
             <div className="flex items-center justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setResetTarget(c)}>
@@ -74,10 +83,9 @@ export default function Customers() {
                 <Pencil className="h-4 w-4 text-ink/50" />
               </button>
               <DeleteButton
-                onClick={() => {
-                  if (confirm(`Delete ${c.name}? This cannot be undone.`)) {
-                    deleteCustomer.mutate(c.id)
-                  }
+                onClick={async () => {
+                  const ok = await confirm({ title: `Delete ${c.name}?`, description: "This cannot be undone.", confirmLabel: "Delete", danger: true })
+                  if (ok) deleteCustomer.mutate(c.id)
                 }}
               />
             </div>,
@@ -92,24 +100,9 @@ export default function Customers() {
   )
 }
 
-function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-ink/5">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 function ResetPasswordModal({ customer, onClose }: { customer: AdminCustomer; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
 
@@ -117,13 +110,14 @@ function ResetPasswordModal({ customer, onClose }: { customer: AdminCustomer; on
     mutationFn: () => updateAdminCustomer(customer.id, { newPassword: password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-customers"] })
+      toast.success("Password reset.")
       onClose()
     },
     onError: () => setError("Could not reset password. Please try again."),
   })
 
   return (
-    <ModalShell title="Reset Password" onClose={onClose}>
+    <Modal open onClose={onClose} title="Reset Password" maxWidth="max-w-sm">
       <p className="mt-2 text-sm text-ink/55">
         Set a new password for <span className="font-semibold">{customer.name}</span> ({customer.email}). Share it
         with them directly — no email is sent automatically.
@@ -152,12 +146,13 @@ function ResetPasswordModal({ customer, onClose }: { customer: AdminCustomer; on
           {reset.isPending ? "Saving..." : "Save New Password"}
         </Button>
       </form>
-    </ModalShell>
+    </Modal>
   )
 }
 
 function EditCustomerModal({ customer, onClose }: { customer: AdminCustomer; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [name, setName] = useState(customer.name)
   const [email, setEmail] = useState(customer.email)
   const [phone, setPhone] = useState(customer.phone ?? "")
@@ -167,13 +162,14 @@ function EditCustomerModal({ customer, onClose }: { customer: AdminCustomer; onC
     mutationFn: () => updateAdminCustomer(customer.id, { name, email, phone }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-customers"] })
+      toast.success("Customer updated.")
       onClose()
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not update customer. Please try again."),
   })
 
   return (
-    <ModalShell title="Edit Customer" onClose={onClose}>
+    <Modal open onClose={onClose} title="Edit Customer" maxWidth="max-w-sm">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -199,12 +195,13 @@ function EditCustomerModal({ customer, onClose }: { customer: AdminCustomer; onC
           {update.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </form>
-    </ModalShell>
+    </Modal>
   )
 }
 
 function AddCustomerModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -215,13 +212,14 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
     mutationFn: () => createAdminCustomer({ name, email, phone, password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-customers"] })
+      toast.success("Customer created.")
       onClose()
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not create customer. Please try again."),
   })
 
   return (
-    <ModalShell title="Add Customer" onClose={onClose}>
+    <Modal open onClose={onClose} title="Add Customer" maxWidth="max-w-sm">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -259,6 +257,6 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
           {create.isPending ? "Creating..." : "Create Customer"}
         </Button>
       </form>
-    </ModalShell>
+    </Modal>
   )
 }

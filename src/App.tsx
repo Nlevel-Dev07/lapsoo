@@ -30,6 +30,8 @@ import AdminRepair from "@/admin/pages/Repair"
 import AdminSell from "@/admin/pages/Sell"
 import AdminExchange from "@/admin/pages/Exchange"
 import AdminCustomers from "@/admin/pages/Customers"
+import AdminTeams from "@/admin/pages/Teams"
+import AdminSettings from "@/admin/pages/AdminSettings"
 
 function App() {
   return (
@@ -69,6 +71,8 @@ function App() {
             <Route path="/admin/sell" element={<AdminSell />} />
             <Route path="/admin/exchange" element={<AdminExchange />} />
             <Route path="/admin/customers" element={<AdminCustomers />} />
+            <Route path="/admin/team" element={<AdminTeams />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>
       </Routes>

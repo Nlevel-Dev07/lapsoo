@@ -6,6 +6,9 @@ import {
   type LeadStatus,
 } from "@/lib/api"
 import { LeadTable, ContactCell, StatusSelect, DeleteButton, fmtDate } from "@/admin/components/LeadTable"
+import { PageHeader } from "@/admin/components/PageHeader"
+import { useConfirm } from "@/admin/components/ConfirmDialog"
+import { useToast } from "@/admin/components/Toast"
 
 const tabs = [
   { key: "enquiries", label: "Enquiries" },
@@ -21,8 +24,7 @@ export default function Leads() {
 
   return (
     <div className="p-8 max-w-6xl">
-      <h1 className="font-display text-2xl font-bold">Leads</h1>
-      <p className="mt-1 text-sm text-ink/50">General enquiries and corporate leads submitted across the site.</p>
+      <PageHeader title="Leads" subtitle="General enquiries and corporate leads submitted across the site." />
 
       <div className="mt-6 flex gap-1 rounded-full bg-white border border-ink/8 p-1 w-fit">
         {tabs.map((t) => (
@@ -48,14 +50,21 @@ export default function Leads() {
 
 function EnquiriesTable() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
+  const toast = useToast()
   const { data, isLoading } = useQuery({ queryKey: ["admin-enquiries"], queryFn: fetchEnquiries })
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: LeadStatus }) => updateEnquiryStatus(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-enquiries"] }),
+    onError: () => toast.error("Could not update status."),
   })
   const remove = useMutation({
     mutationFn: deleteEnquiry,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-enquiries"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-enquiries"] })
+      toast.success("Enquiry deleted.")
+    },
+    onError: () => toast.error("Could not delete enquiry."),
   })
 
   return (
@@ -70,7 +79,12 @@ function EnquiriesTable() {
         e.product?.model ?? "—",
         fmtDate(e.createdAt),
         <StatusSelect value={e.status} onChange={(status) => updateStatus.mutate({ id: e.id, status })} options={leadStatuses} />,
-        <DeleteButton onClick={() => confirm("Delete this enquiry?") && remove.mutate(e.id)} />,
+        <DeleteButton
+          onClick={async () => {
+            const ok = await confirm({ title: "Delete this enquiry?", confirmLabel: "Delete", danger: true })
+            if (ok) remove.mutate(e.id)
+          }}
+        />,
       ])}
     />
   )
@@ -78,14 +92,21 @@ function EnquiriesTable() {
 
 function CorporateTable() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
+  const toast = useToast()
   const { data, isLoading } = useQuery({ queryKey: ["admin-corporate"], queryFn: fetchCorporateLeads })
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: LeadStatus }) => updateCorporateLeadStatus(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-corporate"] }),
+    onError: () => toast.error("Could not update status."),
   })
   const remove = useMutation({
     mutationFn: deleteCorporateLead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-corporate"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-corporate"] })
+      toast.success("Lead deleted.")
+    },
+    onError: () => toast.error("Could not delete lead."),
   })
 
   return (
@@ -100,7 +121,12 @@ function CorporateTable() {
         l.gstin || "—",
         fmtDate(l.createdAt),
         <StatusSelect value={l.status} onChange={(status) => updateStatus.mutate({ id: l.id, status })} options={leadStatuses} />,
-        <DeleteButton onClick={() => confirm("Delete this lead?") && remove.mutate(l.id)} />,
+        <DeleteButton
+          onClick={async () => {
+            const ok = await confirm({ title: "Delete this lead?", confirmLabel: "Delete", danger: true })
+            if (ok) remove.mutate(l.id)
+          }}
+        />,
       ])}
     />
   )

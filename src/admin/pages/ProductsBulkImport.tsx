@@ -6,6 +6,9 @@ import { ChevronLeft, Download, UploadCloud, Loader2, CheckCircle2, XCircle } fr
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Modal } from "@/components/dashboard/Modal"
+import { LeadTable } from "@/admin/components/LeadTable"
+import { PageHeader } from "@/admin/components/PageHeader"
+import { useToast } from "@/admin/components/Toast"
 import { bulkImportProducts, ApiError, type BulkImportResponse } from "@/lib/api"
 
 const TEMPLATE_HEADERS = [
@@ -177,6 +180,7 @@ function downloadTemplate() {
 export default function ProductsBulkImport() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   const [fileName, setFileName] = useState<string | null>(null)
   const [rows, setRows] = useState<ParsedRow[]>([])
@@ -212,8 +216,10 @@ export default function ProductsBulkImport() {
       const res = await bulkImportProducts(rows.map((r) => r.payload))
       setResult(res)
       queryClient.invalidateQueries({ queryKey: ["admin-products"] })
+      toast.success(`Imported ${res.created + res.updated} product${res.created + res.updated === 1 ? "" : "s"}.`)
     } catch (err) {
       setParseError(err instanceof ApiError ? err.message : "Import failed.")
+      toast.error("Import failed.")
     } finally {
       setImporting(false)
     }
@@ -224,15 +230,15 @@ export default function ProductsBulkImport() {
       <Link to="/admin/products" className="flex items-center gap-1.5 text-sm text-ink/50 hover:text-ink mb-4">
         <ChevronLeft className="h-4 w-4" /> Back to Products
       </Link>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Bulk Import Products</h1>
-          <p className="mt-1 text-sm text-ink/50">Upload an Excel (.xlsx) or CSV file to create or update products in one go.</p>
-        </div>
-        <Button type="button" variant="outline" onClick={downloadTemplate}>
-          <Download className="h-4 w-4" /> Download Template
-        </Button>
-      </div>
+      <PageHeader
+        title="Bulk Import Products"
+        subtitle="Upload an Excel (.xlsx) or CSV file to create or update products in one go."
+        actions={
+          <Button type="button" variant="outline" onClick={downloadTemplate}>
+            <Download className="h-4 w-4" /> Download Template
+          </Button>
+        }
+      />
 
       <section className="mt-8 rounded-2xl border border-ink/8 bg-white p-6 space-y-4">
         <h3 className="font-semibold text-sm text-ink/60 uppercase tracking-wide">1. Upload File</h3>
@@ -254,8 +260,8 @@ export default function ProductsBulkImport() {
       </section>
 
       {rows.length > 0 && (
-        <section className="mt-6 rounded-2xl border border-ink/8 bg-white overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-ink/8">
+        <section className="mt-6">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-ink/60 uppercase tracking-wide">
               2. Preview ({rows.length} row{rows.length === 1 ? "" : "s"})
             </h3>
@@ -264,28 +270,18 @@ export default function ProductsBulkImport() {
               {importing ? "Importing..." : `Import ${rows.length} Product${rows.length === 1 ? "" : "s"}`}
             </Button>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-paper-soft text-left text-xs font-semibold uppercase tracking-wide text-ink/45">
-              <tr>
-                <th className="px-5 py-3">Row</th>
-                <th className="px-5 py-3">Slug</th>
-                <th className="px-5 py-3">Brand</th>
-                <th className="px-5 py-3">Model</th>
-                <th className="px-5 py-3">Price</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/6">
-              {rows.map((r) => (
-                <tr key={r.sourceRow}>
-                  <td className="px-5 py-3 text-ink/40">{r.sourceRow}</td>
-                  <td className="px-5 py-3 font-medium">{r.preview.slug || <span className="text-red-400">missing</span>}</td>
-                  <td className="px-5 py-3 text-ink/70">{r.preview.brand}</td>
-                  <td className="px-5 py-3 text-ink/70">{r.preview.model}</td>
-                  <td className="px-5 py-3 text-ink/70">{String(r.preview.priceFrom)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <LeadTable
+            isLoading={false}
+            empty={false}
+            columns={["Row", "Slug", "Brand", "Model", "Price"]}
+            rows={rows.map((r) => [
+              <span className="text-ink/40">{r.sourceRow}</span>,
+              <span className="font-medium">{r.preview.slug || <span className="text-red-400">missing</span>}</span>,
+              <span className="text-ink/70">{r.preview.brand}</span>,
+              <span className="text-ink/70">{r.preview.model}</span>,
+              <span className="text-ink/70">{String(r.preview.priceFrom)}</span>,
+            ])}
+          />
         </section>
       )}
 

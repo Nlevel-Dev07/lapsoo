@@ -1,6 +1,17 @@
 import { useQuery } from "@tanstack/react-query"
-import { Laptop, Tag, Newspaper, Inbox, Building2, Wrench, RefreshCw, TrendingUp, Users } from "lucide-react"
+import { motion } from "framer-motion"
+import { Laptop, Tag, Newspaper, TrendingUp, Users } from "lucide-react"
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, PieChart, Pie, Cell,
+} from "recharts"
 import { fetchDashboardStats } from "@/lib/api"
+import { useAdminAuth } from "@/admin/useAdminAuth"
+import { PageHeader } from "@/admin/components/PageHeader"
+import { StatCard } from "@/admin/components/StatCard"
+
+// Validated categorical order (dataviz skill reference palette) — fixed order, never cycled.
+const CATEGORICAL = ["#2a78d6", "#008300", "#e87ba4", "#eda100", "#1baf7a", "#eb6834", "#4a3aa7", "#e34948"]
 
 const sourceLabels: Record<string, string> = {
   GENERAL_ENQUIRY: "General Enquiry",
@@ -18,19 +29,58 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Cancelled",
 }
 
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return "Good morning"
+  if (h < 18) return "Good afternoon"
+  return "Good evening"
+}
+
+function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="rounded-2xl border border-ink/8 bg-white p-6"
+    >
+      <h3 className="font-display font-bold">{title}</h3>
+      {subtitle && <p className="text-xs text-ink/40 mt-0.5">{subtitle}</p>}
+      <div className="mt-5">{children}</div>
+    </motion.div>
+  )
+}
+
+function ChartSkeleton() {
+  return <div className="h-64 animate-pulse rounded-xl bg-paper-soft" />
+}
+
 export default function Dashboard() {
+  const { session } = useAdminAuth()
   const { data, isLoading } = useQuery({ queryKey: ["dashboard-stats"], queryFn: fetchDashboardStats })
 
   return (
-    <div className="p-8 max-w-6xl">
-      <h1 className="font-display text-2xl font-bold">Dashboard</h1>
-      <p className="mt-1 text-sm text-ink/50">Overview of your catalog and lead activity.</p>
+    <div className="p-8 max-w-7xl">
+      <PageHeader
+        title={`${greeting()}, ${session?.name?.split(" ")[0] ?? ""}`}
+        subtitle={new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+      />
 
       {isLoading || !data ? (
-        <div className="mt-10 text-ink/40 text-sm">Loading stats…</div>
+        <div className="mt-8 space-y-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-32 animate-pulse rounded-2xl bg-white border border-ink/8" />
+            ))}
+          </div>
+          <div className="grid lg:grid-cols-2 gap-5">
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </div>
+        </div>
       ) : (
         <>
-          <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard icon={Laptop} label="Published Products" value={data.catalog.publishedProductCount} sub={`${data.catalog.productCount} total`} />
             <StatCard icon={Tag} label="Brands" value={data.catalog.brandCount} />
             <StatCard icon={Newspaper} label="Blog Posts" value={data.catalog.blogCount} />
@@ -38,67 +88,131 @@ export default function Dashboard() {
             <StatCard icon={Users} label="Registered Customers" value={data.customers.total} sub={`${data.customers.last30Days} new in 30 days`} />
           </div>
 
-          <div className="mt-10 grid lg:grid-cols-2 gap-5">
-            <div className="rounded-2xl border border-ink/8 bg-white p-6">
-              <h3 className="font-display font-bold">Leads by Type</h3>
-              <div className="mt-5 space-y-3">
-                <LeadRow icon={Inbox} label="General & Product Enquiries" value={data.leads.enquiries} />
-                <LeadRow icon={Building2} label="Corporate Leads" value={data.leads.corporateLeads} />
-                <LeadRow icon={Wrench} label="Repair Requests" value={data.leads.repairRequests} />
-                <LeadRow icon={RefreshCw} label="Sell / Exchange" value={data.leads.sellExchangeLeads} />
-              </div>
-            </div>
+          <div className="mt-6">
+            <ChartCard title="Leads over the last 14 days" subtitle="All enquiries, corporate, repair, and sell/exchange submissions">
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={data.leadsTrend} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="leadsGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2f5eff" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="#2f5eff" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="0" vertical={false} stroke="#e6e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    tick={{ fontSize: 11, fill: "#8a8b93" }}
+                    axisLine={false}
+                    tickLine={false}
+                    minTickGap={24}
+                  />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#8a8b93" }} axisLine={false} tickLine={false} width={28} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid #e6e7eb", fontSize: 13 }}
+                    labelFormatter={(d) => new Date(String(d)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  />
+                  <Area type="monotone" dataKey="count" name="Leads" stroke="#2f5eff" strokeWidth={2} fill="url(#leadsGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
 
-            <div className="rounded-2xl border border-ink/8 bg-white p-6">
-              <h3 className="font-display font-bold">Enquiries by Source</h3>
-              <div className="mt-5 space-y-3">
-                {data.enquiriesBySource.length === 0 && <p className="text-sm text-ink/40">No enquiries yet.</p>}
-                {data.enquiriesBySource.map((e) => (
-                  <div key={e.source} className="flex items-center justify-between text-sm">
-                    <span className="text-ink/60">{sourceLabels[e.source] ?? e.source}</span>
-                    <span className="font-semibold">{e.count}</span>
+          <div className="mt-5 grid lg:grid-cols-2 gap-5">
+            <ChartCard title="Repair Requests by Status">
+              {data.repairsByStatus.length === 0 ? (
+                <p className="text-sm text-ink/40">No repair requests yet.</p>
+              ) : (
+                <div className="flex items-center gap-6">
+                  <ResponsiveContainer width="55%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={data.repairsByStatus}
+                        dataKey="count"
+                        nameKey="status"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={2}
+                        cornerRadius={4}
+                        strokeWidth={2}
+                        stroke="#ffffff"
+                      >
+                        {data.repairsByStatus.map((_, i) => (
+                          <Cell key={i} fill={CATEGORICAL[i % CATEGORICAL.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, border: "1px solid #e6e7eb", fontSize: 13 }}
+                        formatter={(value, _name, entry) => {
+                          const status = (entry as { payload?: { status?: string } })?.payload?.status
+                          return [value, status ? (statusLabels[status] ?? status) : ""]
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-2 min-w-0">
+                    {data.repairsByStatus.map((r, i) => (
+                      <div key={r.status} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="flex items-center gap-2 text-ink/60 min-w-0">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CATEGORICAL[i % CATEGORICAL.length] }} />
+                          <span className="truncate">{statusLabels[r.status] ?? r.status}</span>
+                        </span>
+                        <span className="font-semibold shrink-0">{r.count}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              )}
+            </ChartCard>
 
-            <div className="rounded-2xl border border-ink/8 bg-white p-6 lg:col-span-2">
-              <h3 className="font-display font-bold">Repair Requests by Status</h3>
-              <div className="mt-5 grid sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {data.repairsByStatus.length === 0 && <p className="text-sm text-ink/40">No repair requests yet.</p>}
-                {data.repairsByStatus.map((r) => (
-                  <div key={r.status} className="rounded-xl bg-paper-soft p-4">
-                    <p className="text-xs font-semibold text-ink/45 uppercase tracking-wide">{statusLabels[r.status] ?? r.status}</p>
-                    <p className="mt-1 font-display text-2xl font-bold">{r.count}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ChartCard title="Enquiries by Source">
+              {data.enquiriesBySource.length === 0 ? (
+                <p className="text-sm text-ink/40">No enquiries yet.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart
+                    data={data.enquiriesBySource.map((e) => ({ ...e, label: sourceLabels[e.source] ?? e.source }))}
+                    layout="vertical"
+                    margin={{ top: 0, right: 24, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="0" horizontal={false} stroke="#e6e7eb" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#8a8b93" }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="label" tick={{ fontSize: 12, fill: "#0a0a0c" }} axisLine={false} tickLine={false} width={130} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e6e7eb", fontSize: 13 }} cursor={{ fill: "#f6f7f9" }} />
+                    <Bar dataKey="count" name="Enquiries" fill="#2a78d6" radius={[0, 4, 4, 0]} maxBarSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+          </div>
+
+          <div className="mt-5">
+            <ChartCard title="Leads by Type">
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart
+                  data={[
+                    { label: "Enquiries", count: data.leads.enquiries },
+                    { label: "Corporate", count: data.leads.corporateLeads },
+                    { label: "Repair", count: data.leads.repairRequests },
+                    { label: "Sell / Exchange", count: data.leads.sellExchangeLeads },
+                  ]}
+                  margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="0" vertical={false} stroke="#e6e7eb" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#0a0a0c" }} axisLine={false} tickLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#8a8b93" }} axisLine={false} tickLine={false} width={28} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e6e7eb", fontSize: 13 }} cursor={{ fill: "#f6f7f9" }} />
+                  <Bar dataKey="count" name="Leads" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                    {["Enquiries", "Corporate", "Repair", "Sell / Exchange"].map((_, i) => (
+                      <Cell key={i} fill={CATEGORICAL[i % CATEGORICAL.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
           </div>
         </>
       )}
-    </div>
-  )
-}
-
-function StatCard({ icon: Icon, label, value, sub, accent }: { icon: typeof Laptop; label: string; value: number; sub?: string; accent?: boolean }) {
-  return (
-    <div className={`rounded-2xl border p-6 ${accent ? "border-blue-200 bg-blue-50" : "border-ink/8 bg-white"}`}>
-      <Icon className={`h-5 w-5 ${accent ? "text-blue-600" : "text-ink/40"}`} />
-      <p className="mt-4 font-display text-3xl font-extrabold">{value}</p>
-      <p className="mt-1 text-sm text-ink/50">{label}</p>
-      {sub && <p className="mt-0.5 text-xs text-ink/35">{sub}</p>}
-    </div>
-  )
-}
-
-function LeadRow({ icon: Icon, label, value }: { icon: typeof Laptop; label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="flex items-center gap-2.5 text-ink/60">
-        <Icon className="h-4 w-4 text-ink/35" /> {label}
-      </span>
-      <span className="font-semibold">{value}</span>
     </div>
   )
 }
