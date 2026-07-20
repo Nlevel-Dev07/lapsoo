@@ -5,6 +5,7 @@ import * as XLSX from "xlsx"
 import { ChevronLeft, Download, UploadCloud, Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Modal } from "@/components/dashboard/Modal"
 import { bulkImportProducts, ApiError, type BulkImportResponse } from "@/lib/api"
 
 const TEMPLATE_HEADERS = [
@@ -288,47 +289,50 @@ export default function ProductsBulkImport() {
         </section>
       )}
 
-      {result && (
-        <section className="mt-6 rounded-2xl border border-ink/8 bg-white overflow-hidden">
-          <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-ink/8">
-            <h3 className="font-semibold text-sm text-ink/60 uppercase tracking-wide">3. Results</h3>
-            <Badge variant="success">{result.created} created</Badge>
-            <Badge variant="blue">{result.updated} updated</Badge>
-            {result.failed > 0 && <Badge variant="outline" className="border-red-200 text-red-500">{result.failed} failed</Badge>}
+      <Modal open={!!result} onClose={() => setResult(null)} title="Import Results" maxWidth="max-w-3xl">
+        {result && (
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="success">{result.created} created</Badge>
+              <Badge variant="blue">{result.updated} updated</Badge>
+              {result.failed > 0 && <Badge variant="outline" className="border-red-200 text-red-500">{result.failed} failed</Badge>}
+            </div>
+            <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-ink/8">
+              <table className="w-full text-sm">
+                <thead className="bg-paper-soft text-left text-xs font-semibold uppercase tracking-wide text-ink/45">
+                  <tr>
+                    <th className="px-5 py-3">Row</th>
+                    <th className="px-5 py-3">Slug</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink/6">
+                  {result.results.map((r) => (
+                    <tr key={r.row}>
+                      <td className="px-5 py-3 text-ink/40">{r.row}</td>
+                      <td className="px-5 py-3 font-medium">{r.slug ?? "—"}</td>
+                      <td className="px-5 py-3">
+                        {r.status === "error" ? (
+                          <span className="flex items-center gap-1.5 text-red-500 font-medium"><XCircle className="h-3.5 w-3.5" /> Error</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {r.status === "created" ? "Created" : "Updated"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-ink/50">{r.error ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <Button type="button" variant="accent" onClick={() => navigate("/admin/products")}>Go to Products</Button>
+            </div>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-paper-soft text-left text-xs font-semibold uppercase tracking-wide text-ink/45">
-              <tr>
-                <th className="px-5 py-3">Row</th>
-                <th className="px-5 py-3">Slug</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/6">
-              {result.results.map((r) => (
-                <tr key={r.row}>
-                  <td className="px-5 py-3 text-ink/40">{r.row}</td>
-                  <td className="px-5 py-3 font-medium">{r.slug ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    {r.status === "error" ? (
-                      <span className="flex items-center gap-1.5 text-red-500 font-medium"><XCircle className="h-3.5 w-3.5" /> Error</span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> {r.status === "created" ? "Created" : "Updated"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-ink/50">{r.error ?? ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="flex gap-3 px-6 py-4 border-t border-ink/8">
-            <Button type="button" variant="accent" onClick={() => navigate("/admin/products")}>Go to Products</Button>
-          </div>
-        </section>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

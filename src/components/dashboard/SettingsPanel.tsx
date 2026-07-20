@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useQueryClient } from "@tanstack/react-query"
-import { CheckCircle2, Moon, Sun, Trash2 } from "lucide-react"
+import { CheckCircle2, Moon, Sun, Trash2, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { updateCustomerProfile, changeCustomerPassword, ApiError, type CustomerProfile } from "@/lib/api"
+import { updateCustomerProfile, changeCustomerPassword, deleteCustomerAccount, ApiError, type CustomerProfile } from "@/lib/api"
 import { useCustomerAuth } from "@/hooks/useCustomerAuth"
 
 const profileSchema = z.object({
@@ -44,6 +45,7 @@ export function SettingsPanel({ profile }: { profile: CustomerProfile }) {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [appearance, setAppearance] = useState<"light" | "dark">("light")
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 
   const profileForm = useForm<ProfileValues>({ resolver: zodResolver(profileSchema), defaultValues: { name: profile.name, phone: profile.phone ?? "" } })
   const passwordForm = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema) })
@@ -163,15 +165,70 @@ export function SettingsPanel({ profile }: { profile: CustomerProfile }) {
         <Button
           variant="outline"
           className="mt-4 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-          onClick={() => {
-            if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
-              alert("Please contact our support team via WhatsApp or email to complete account deletion.")
-            }
-          }}
+          onClick={() => setDeleteModalOpen(true)}
         >
           <Trash2 className="h-3.5 w-3.5" /> Delete My Account
         </Button>
       </SettingsSection>
+
+      {deleteModalOpen && <DeleteAccountModal onClose={() => setDeleteModalOpen(false)} />}
+    </div>
+  )
+}
+
+function DeleteAccountModal({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate()
+  const { invalidate } = useCustomerAuth()
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setSubmitting(true)
+    try {
+      await deleteCustomerAccount(password)
+      invalidate()
+      navigate("/")
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not delete your account. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-lg font-bold">Delete Account</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-ink/5">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-ink/55">
+          This permanently deletes your account and cannot be undone. Enter your password to confirm.
+        </p>
+        <form onSubmit={onSubmit} className="mt-4 space-y-3">
+          <Input
+            type="password"
+            placeholder="Your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <Button
+            type="submit"
+            variant="outline"
+            className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+            disabled={submitting}
+          >
+            {submitting ? "Deleting..." : "Permanently Delete My Account"}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }

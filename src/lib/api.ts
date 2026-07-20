@@ -7,9 +7,11 @@ const BASE = "/api"
 
 class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  body?: Record<string, unknown>
+  constructor(message: string, status: number, body?: Record<string, unknown>) {
     super(message)
     this.status = status
+    this.body = body
   }
 }
 
@@ -25,13 +27,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     let message = `Request failed (${res.status})`
+    let body: Record<string, unknown> | undefined
     try {
-      const body = await res.json()
-      message = body.error ?? message
+      body = await res.json()
+      message = (body?.error as string) ?? message
     } catch {
       // ignore
     }
-    throw new ApiError(message, res.status)
+    throw new ApiError(message, res.status, body)
   }
 
   if (res.status === 204) return undefined as T
@@ -161,16 +164,54 @@ export interface CustomerSession {
 export interface CustomerSignupPayload {
   name: string
   email: string
-  phone?: string
+  phone: string
   password: string
 }
 
-export function customerSignup(payload: CustomerSignupPayload) {
-  return request<CustomerSession>("/auth/customer-signup", { method: "POST", body: JSON.stringify(payload) })
+export interface CustomerSignupResult {
+  id: string
+  email: string
+  name: string
+  requiresVerification: true
 }
 
-export function customerLogin(email: string, password: string) {
-  return request<CustomerSession>("/auth/customer-login", { method: "POST", body: JSON.stringify({ email, password }) })
+export function customerSignup(payload: CustomerSignupPayload) {
+  return request<CustomerSignupResult>("/auth/customer-signup", { method: "POST", body: JSON.stringify(payload) })
+}
+
+export function customerLogin(email: string, password: string, captchaToken: string, captchaAnswer: number) {
+  return request<CustomerSession>("/auth/customer-login", {
+    method: "POST",
+    body: JSON.stringify({ email, password, captchaToken, captchaAnswer }),
+  })
+}
+
+export interface LoginCaptcha {
+  token: string
+  question: string
+}
+
+export function fetchLoginCaptcha() {
+  return request<LoginCaptcha>("/auth/customer-captcha")
+}
+
+export function verifyCustomerEmail(email: string, code: string) {
+  return request<CustomerSession>("/auth/customer-verify-email", { method: "POST", body: JSON.stringify({ email, code }) })
+}
+
+export function resendCustomerVerification(email: string) {
+  return request<{ ok: true }>("/auth/customer-resend-code", { method: "POST", body: JSON.stringify({ email }) })
+}
+
+export function requestPasswordReset(email: string) {
+  return request<{ ok: true }>("/auth/customer-forgot-password", { method: "POST", body: JSON.stringify({ email }) })
+}
+
+export function resetPassword(email: string, code: string, newPassword: string) {
+  return request<CustomerSession>("/auth/customer-reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email, code, newPassword }),
+  })
 }
 
 export function customerLogout() {
@@ -199,6 +240,10 @@ export function updateCustomerProfile(payload: { name: string; phone?: string })
 
 export function changeCustomerPassword(payload: { currentPassword: string; newPassword: string }) {
   return request<{ ok: true }>("/auth/customer-change-password", { method: "POST", body: JSON.stringify(payload) })
+}
+
+export function deleteCustomerAccount(password: string) {
+  return request<{ ok: true }>("/auth/customer-delete-account", { method: "DELETE", body: JSON.stringify({ password }) })
 }
 
 export interface MyRepairRequest {
@@ -429,8 +474,19 @@ export function fetchAdminCustomers() {
   return request<AdminCustomer[]>("/admin/customers")
 }
 
-export function updateAdminCustomer(id: string, payload: Partial<{ active: boolean; newPassword: string }>) {
+export function createAdminCustomer(payload: { name: string; email: string; phone: string; password: string }) {
+  return request<AdminCustomer>("/admin/customers", { method: "POST", body: JSON.stringify(payload) })
+}
+
+export function updateAdminCustomer(
+  id: string,
+  payload: Partial<{ name: string; email: string; phone: string; active: boolean; newPassword: string }>
+) {
   return request<AdminCustomer>(`/admin/customers/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
+}
+
+export function deleteAdminCustomer(id: string) {
+  return request<void>(`/admin/customers/${id}`, { method: "DELETE" })
 }
 
 // ---------- Admin: image upload ----------

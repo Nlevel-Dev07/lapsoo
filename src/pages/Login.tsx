@@ -1,27 +1,36 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { motion, AnimatePresence } from "framer-motion"
-import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ShieldCheck, Wrench, Sparkles } from "lucide-react"
+import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ShieldCheck, Wrench, Sparkles, KeyRound, RefreshCw } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { customerLogin, customerSignup, ApiError } from "@/lib/api"
+import {
+  customerLogin,
+  customerSignup,
+  verifyCustomerEmail,
+  resendCustomerVerification,
+  fetchLoginCaptcha,
+  ApiError,
+  type LoginCaptcha,
+} from "@/lib/api"
 import { useCustomerAuth } from "@/hooks/useCustomerAuth"
 import { useSeo } from "@/lib/useSeo"
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
+  captchaAnswer: z.string().min(1, "Answer the security check"),
 })
 
 const signupSchema = z.object({
   name: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
-  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number").optional().or(z.literal("")),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 })
 
@@ -47,6 +56,12 @@ export default function Login() {
   const navigate = useNavigate()
   const { invalidate } = useCustomerAuth()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [verifyEmail, setVerifyEmail] = useState<string | null>(null)
+  const [verifyCode, setVerifyCode] = useState("")
+  const [verifying, setVerifying] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
+  const [captcha, setCaptcha] = useState<LoginCaptcha | null>(null)
 
   useSeo({
     title: mode === "login" ? "Login" : "Sign Up",
@@ -56,25 +71,79 @@ export default function Login() {
   const loginForm = useForm<LoginValues>({ resolver: zodResolver(loginSchema) })
   const signupForm = useForm<SignupValues>({ resolver: zodResolver(signupSchema) })
 
+  const refreshCaptcha = async () => {
+    try {
+      const next = await fetchLoginCaptcha()
+      setCaptcha(next)
+      loginForm.setValue("captchaAnswer", "")
+    } catch {
+      setCaptcha(null)
+    }
+  }
+
+  useEffect(() => {
+    fetchLoginCaptcha()
+      .then(setCaptcha)
+      .catch(() => setCaptcha(null))
+  }, [])
+
   const onLogin = async (data: LoginValues) => {
     setServerError(null)
+    if (!captcha) {
+      setServerError("Security check is loading. Please try again in a moment.")
+      return
+    }
     try {
-      await customerLogin(data.email, data.password)
+      await customerLogin(data.email, data.password, captcha.token, Number(data.captchaAnswer))
       invalidate()
       navigate("/")
     } catch (err) {
+      if (err instanceof ApiError && err.body?.requiresVerification) {
+        setVerifyEmail(data.email)
+        return
+      }
       setServerError(err instanceof ApiError ? err.message : "Login failed. Please try again.")
+      refreshCaptcha()
     }
   }
 
   const onSignup = async (data: SignupValues) => {
     setServerError(null)
     try {
-      await customerSignup({ ...data, phone: data.phone || undefined })
+      await customerSignup(data)
+      setVerifyEmail(data.email)
+    } catch (err) {
+      setServerError(err instanceof ApiError ? err.message : "Signup failed. Please try again.")
+    }
+  }
+
+  const onVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!verifyEmail) return
+    setServerError(null)
+    setVerifying(true)
+    try {
+      await verifyCustomerEmail(verifyEmail, verifyCode)
       invalidate()
       navigate("/")
     } catch (err) {
-      setServerError(err instanceof ApiError ? err.message : "Signup failed. Please try again.")
+      setServerError(err instanceof ApiError ? err.message : "Verification failed. Please try again.")
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const onResendCode = async () => {
+    if (!verifyEmail) return
+    setResendMessage(null)
+    setResending(true)
+    try {
+      await resendCustomerVerification(verifyEmail)
+      setResendMessage("A new code has been sent to your email.")
+    } catch {
+      setResendMessage("Couldn't resend the code. Please try again.")
+    } finally {
+      setResending(false)
     }
   }
 
@@ -82,7 +151,12 @@ export default function Login() {
     setMode(next)
     setServerError(null)
     setShowPassword(false)
+    setVerifyEmail(null)
+    setVerifyCode("")
+    setResendMessage(null)
   }
+
+  const step = verifyEmail ? "verify" : mode
 
   return (
     <div className="bg-paper-soft/40 py-10 md:py-16">
@@ -115,14 +189,58 @@ export default function Login() {
               </div>
 
               <h1 className="mt-6 font-display text-2xl font-extrabold tracking-tight">
-                {mode === "login" ? "Welcome back" : "Create your account"}
+                {step === "verify" ? "Verify your email" : step === "login" ? "Welcome back" : "Create your account"}
               </h1>
               <p className="mt-1.5 text-sm text-ink/45">
-                {mode === "login" ? "Please enter your details to sign in." : "Takes less than a minute to get started."}
+                {step === "verify"
+                  ? `Enter the 6-digit code we sent to ${verifyEmail}.`
+                  : step === "login"
+                    ? "Please enter your details to sign in."
+                    : "Takes less than a minute to get started."}
               </p>
 
               <AnimatePresence mode="wait">
-                {mode === "login" ? (
+                {step === "verify" ? (
+                  <motion.form
+                    key="verify"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    onSubmit={onVerify}
+                    className="mt-6 space-y-4"
+                  >
+                    <div>
+                      <Label htmlFor="verify-code">Verification code</Label>
+                      <div className="relative mt-1.5">
+                        <FieldIcon icon={KeyRound} />
+                        <Input
+                          id="verify-code"
+                          inputMode="numeric"
+                          maxLength={6}
+                          placeholder="123456"
+                          className={fieldClass}
+                          value={verifyCode}
+                          onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        />
+                      </div>
+                    </div>
+                    {serverError && <p className="text-sm text-red-500">{serverError}</p>}
+                    {resendMessage && <p className="text-sm text-ink/50">{resendMessage}</p>}
+                    <Button type="submit" variant="accent" size="lg" className="w-full" disabled={verifying || verifyCode.length !== 6}>
+                      {verifying && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {verifying ? "Verifying..." : "Verify & Continue"}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={onResendCode}
+                      disabled={resending}
+                      className="w-full text-center text-sm font-semibold text-blue-500 hover:text-blue-600 disabled:opacity-50"
+                    >
+                      {resending ? "Resending..." : "Resend code"}
+                    </button>
+                  </motion.form>
+                ) : mode === "login" ? (
                   <motion.form
                     key="login"
                     initial={{ opacity: 0, y: 10 }}
@@ -164,6 +282,32 @@ export default function Login() {
                       </div>
                       {loginForm.formState.errors.password && (
                         <p className="mt-1 text-xs text-red-500">{loginForm.formState.errors.password.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="captcha-answer">Security Check</Label>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <span className="flex h-12 flex-1 items-center rounded-xl bg-blue-50/70 px-4 text-sm font-semibold text-ink/70">
+                          {captcha ? captcha.question : "Loading…"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={refreshCaptcha}
+                          aria-label="Get a new security check"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50/70 text-ink/40 hover:text-ink/60"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <Input
+                        id="captcha-answer"
+                        inputMode="numeric"
+                        placeholder="Your answer"
+                        className={cn(fieldClass, "mt-2 pl-4")}
+                        {...loginForm.register("captchaAnswer")}
+                      />
+                      {loginForm.formState.errors.captchaAnswer && (
+                        <p className="mt-1 text-xs text-red-500">{loginForm.formState.errors.captchaAnswer.message}</p>
                       )}
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -217,7 +361,7 @@ export default function Login() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone (optional)</Label>
+                      <Label htmlFor="phone">Phone</Label>
                       <div className="relative mt-1.5">
                         <FieldIcon icon={Phone} />
                         <Input id="phone" placeholder="98765 43210" className={fieldClass} {...signupForm.register("phone")} />

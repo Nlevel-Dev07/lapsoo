@@ -12,6 +12,7 @@ import Blog from "@/pages/Blog"
 import BlogPost from "@/pages/BlogPost"
 import SellExchange from "@/pages/SellExchange"
 import Login from "@/pages/Login"
+import ForgotPassword from "@/pages/ForgotPassword"
 import Account from "@/pages/Account"
 import NotFound from "@/pages/NotFound"
 
@@ -47,6 +48,7 @@ function App() {
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/sell-exchange" element={<SellExchange />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/account" element={<Account />} />
           <Route path="*" element={<NotFound />} />
         </Route>

@@ -1,14 +1,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 import { z } from "zod"
 import { prisma } from "../_lib/prisma"
-import { hashPassword, signCustomerSession, setCustomerSessionCookie } from "../_lib/customerAuth"
+import { hashPassword } from "../_lib/customerAuth"
 import { withHandler, methodGuard } from "../_lib/handler"
 import { isRateLimited } from "../_lib/rateLimit"
+import { createAndSendVerification } from "../_lib/customerVerification"
 
 const schema = z.object({
   name: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
-  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number").optional().or(z.literal("")),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 })
 
@@ -35,10 +36,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const passwordHash = await hashPassword(password)
   const customer = await prisma.customer.create({
-    data: { name, email, phone: phone || undefined, passwordHash },
+    data: { name, email, phone, passwordHash },
   })
 
-  const token = signCustomerSession({ id: customer.id, email: customer.email, name: customer.name })
-  setCustomerSessionCookie(res, token)
-  res.status(201).json({ id: customer.id, email: customer.email, name: customer.name })
+  await createAndSendVerification(customer)
+
+  res.status(201).json({ id: customer.id, email: customer.email, name: customer.name, requiresVerification: true })
 })
