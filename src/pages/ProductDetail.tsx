@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react"
 import { useParams, Link, Navigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
-import { ChevronRight, MessageCircle, Phone, MapPin, Check, ShieldCheck } from "lucide-react"
+import { ChevronRight, ChevronLeft, MessageCircle, Phone, MapPin, Check, ShieldCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { LaptopMock } from "@/components/shared/LaptopMock"
@@ -15,6 +16,7 @@ import { productGradient } from "@/lib/gradient"
 
 export default function ProductDetail() {
   const { slug } = useParams()
+  const [activeImage, setActiveImage] = useState(0)
 
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ["product", slug],
@@ -22,6 +24,10 @@ export default function ProductDetail() {
     enabled: Boolean(slug),
     retry: false,
   })
+
+  useEffect(() => {
+    setActiveImage(0)
+  }, [slug])
 
   const { data: allProducts } = useQuery({
     queryKey: ["products", product?.ecosystem],
@@ -46,7 +52,10 @@ export default function ProductDetail() {
   const gradient = product.gradientFrom && product.gradientTo
     ? { from: product.gradientFrom, to: product.gradientTo }
     : productGradient(product.slug)
-  const image = product.images?.[0]
+  const images = product.images ?? []
+  const image = images[activeImage] ?? images[0]
+  const goPrev = () => setActiveImage((i) => (i - 1 + images.length) % images.length)
+  const goNext = () => setActiveImage((i) => (i + 1) % images.length)
 
   const specs = [
     { label: "Brand", value: product.brand },
@@ -80,13 +89,51 @@ export default function ProductDetail() {
 
       <section className="container-lap mt-8 grid lg:grid-cols-2 gap-14">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
-          <div className="rounded-3xl bg-paper-soft border border-ink/8 sticky top-24 overflow-hidden">
-            {image ? (
-              <div className="relative w-full aspect-[4/3]">
-                <img src={image} alt={`${product.brand} ${product.model}`} className="h-full w-full object-cover" />
+          <div className="sticky top-24">
+            <div className="relative rounded-3xl bg-paper-soft border border-ink/8 overflow-hidden">
+              {image ? (
+                <div className="relative w-full aspect-[4/3] flex items-center justify-center">
+                  <img src={image} alt={`${product.brand} ${product.model}`} className="h-full w-full object-contain" />
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={goPrev}
+                        aria-label="Previous image"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
+                      >
+                        <ChevronLeft className="h-5 w-5 text-ink/70" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={goNext}
+                        aria-label="Next image"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
+                      >
+                        <ChevronRight className="h-5 w-5 text-ink/70" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <LaptopMock glyph={product.brand[0]} from={gradient.from} to={gradient.to} className="p-12" />
+              )}
+            </div>
+            {images.length > 1 && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                {images.map((img, i) => (
+                  <button
+                    key={img}
+                    type="button"
+                    onClick={() => setActiveImage(i)}
+                    className={`h-16 w-16 shrink-0 rounded-xl overflow-hidden ring-2 transition-colors ${
+                      i === activeImage ? "ring-blue-500" : "ring-transparent hover:ring-ink/15"
+                    }`}
+                  >
+                    <img src={img} alt={`${product.brand} ${product.model} view ${i + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
               </div>
-            ) : (
-              <LaptopMock glyph={product.brand[0]} from={gradient.from} to={gradient.to} className="p-12" />
             )}
           </div>
         </motion.div>

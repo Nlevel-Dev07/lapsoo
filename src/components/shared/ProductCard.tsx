@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
@@ -7,7 +8,31 @@ import { productGradient } from "@/lib/gradient"
 
 export function ProductCard({ p, index = 0 }: { p: Product & { images?: string[] }; index?: number }) {
   const gradient = p.gradientFrom && p.gradientTo ? { from: p.gradientFrom, to: p.gradientTo } : productGradient(p.slug)
-  const image = p.images?.[0]
+  const images = p.images ?? []
+  const [hoverIndex, setHoverIndex] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const image = images[hoverIndex] ?? images[0]
+
+  const startCycling = () => {
+    if (images.length < 2) return
+    intervalRef.current = setInterval(() => {
+      setHoverIndex((i) => (i + 1) % images.length)
+    }, 1000)
+  }
+
+  const stopCycling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    setHoverIndex(0)
+  }
+
+  useEffect(() => () => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+  }, [])
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -17,6 +42,8 @@ export function ProductCard({ p, index = 0 }: { p: Product & { images?: string[]
     >
       <Link
         to={`/products/${p.slug}`}
+        onMouseEnter={startCycling}
+        onMouseLeave={stopCycling}
         className="group block h-full rounded-3xl border border-ink/8 bg-white overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-500"
       >
         <div className="bg-paper-soft relative">
@@ -26,8 +53,18 @@ export function ProductCard({ p, index = 0 }: { p: Product & { images?: string[]
             </Badge>
           )}
           {image ? (
-            <div className="relative w-full aspect-[4/3]">
-              <img src={image} alt={`${p.brand} ${p.model}`} className="h-full w-full object-cover" />
+            <div className="relative w-full aspect-[4/3] flex items-center justify-center">
+              <img src={image} alt={`${p.brand} ${p.model}`} className="h-full w-full object-contain" />
+              {images.length > 1 && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {images.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 w-1.5 rounded-full transition-colors ${i === hoverIndex ? "bg-blue-500" : "bg-ink/20"}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <LaptopMock glyph={p.brand[0]} from={gradient.from} to={gradient.to} className="p-6" />
