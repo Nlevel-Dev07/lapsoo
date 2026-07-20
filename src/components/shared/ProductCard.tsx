@@ -5,8 +5,9 @@ import { LaptopMock } from "@/components/shared/LaptopMock"
 import { formatPrice, type Product } from "@/data/products"
 import { productGradient } from "@/lib/gradient"
 
-export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
+export function ProductCard({ p, index = 0 }: { p: Product & { images?: string[] }; index?: number }) {
   const gradient = p.gradientFrom && p.gradientTo ? { from: p.gradientFrom, to: p.gradientTo } : productGradient(p.slug)
+  const image = p.images?.[0]
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -24,7 +25,13 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
               {p.availability}
             </Badge>
           )}
-          <LaptopMock glyph={p.brand[0]} from={gradient.from} to={gradient.to} className="p-6" />
+          {image ? (
+            <div className="relative w-full aspect-[4/3]">
+              <img src={image} alt={`${p.brand} ${p.model}`} className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <LaptopMock glyph={p.brand[0]} from={gradient.from} to={gradient.to} className="p-6" />
+          )}
         </div>
         <div className="p-5">
           <div className="flex items-center gap-2 mb-2">

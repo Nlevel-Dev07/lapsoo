@@ -11,7 +11,7 @@ export function LeadTable({
   isLoading,
   empty,
 }: {
-  columns: string[]
+  columns: React.ReactNode[]
   rows?: React.ReactNode[][]
   isLoading: boolean
   empty: boolean
@@ -21,8 +21,8 @@ export function LeadTable({
       <table className="w-full text-sm">
         <thead className="bg-paper-soft text-left text-xs font-semibold uppercase tracking-wide text-ink/45">
           <tr>
-            {columns.map((c) => (
-              <th key={c} className="px-5 py-3 whitespace-nowrap">{c}</th>
+            {columns.map((c, i) => (
+              <th key={i} className="px-4 py-3 whitespace-nowrap">{c}</th>
             ))}
           </tr>
         </thead>
@@ -36,7 +36,7 @@ export function LeadTable({
           {rows?.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
-                <td key={j} className="px-5 py-3 align-middle whitespace-nowrap">{cell}</td>
+                <td key={j} className="px-4 py-3 align-middle whitespace-nowrap">{cell}</td>
               ))}
             </tr>
           ))}

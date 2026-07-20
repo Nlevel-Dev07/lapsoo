@@ -46,6 +46,7 @@ export default function ProductDetail() {
   const gradient = product.gradientFrom && product.gradientTo
     ? { from: product.gradientFrom, to: product.gradientTo }
     : productGradient(product.slug)
+  const image = product.images?.[0]
 
   const specs = [
     { label: "Brand", value: product.brand },
@@ -79,8 +80,14 @@ export default function ProductDetail() {
 
       <section className="container-lap mt-8 grid lg:grid-cols-2 gap-14">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
-          <div className="rounded-3xl bg-paper-soft border border-ink/8 sticky top-24">
-            <LaptopMock glyph={product.brand[0]} from={gradient.from} to={gradient.to} className="p-12" />
+          <div className="rounded-3xl bg-paper-soft border border-ink/8 sticky top-24 overflow-hidden">
+            {image ? (
+              <div className="relative w-full aspect-[4/3]">
+                <img src={image} alt={`${product.brand} ${product.model}`} className="h-full w-full object-cover" />
+              </div>
+            ) : (
+              <LaptopMock glyph={product.brand[0]} from={gradient.from} to={gradient.to} className="p-12" />
+            )}
           </div>
         </motion.div>
 

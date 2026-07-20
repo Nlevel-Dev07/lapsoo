@@ -117,6 +117,13 @@ function toList(v: unknown): string[] {
     .filter(Boolean)
 }
 
+function toImageList(v: unknown): string[] {
+  return toStr(v)
+    .split(/[|,]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 function parseWorkbook(buffer: ArrayBuffer): ParsedRow[] {
   const workbook = XLSX.read(buffer, { type: "array" })
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -147,7 +154,7 @@ function parseWorkbook(buffer: ArrayBuffer): ParsedRow[] {
       screenSize: toNum(mapped.screenSize),
       availability: mapped.availability ? normalizeEnumValue(toStr(mapped.availability), AVAILABILITIES) : "In Stock",
       highlights: toList(mapped.highlights),
-      images: toList(mapped.images),
+      images: toImageList(mapped.images),
       published: toBool(mapped.published, true),
     }
 

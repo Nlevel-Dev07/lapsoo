@@ -43,6 +43,7 @@ function FieldIcon({ icon: Icon }: { icon: typeof Mail }) {
 export default function Login() {
   const [mode, setMode] = useState<"login" | "signup">("login")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const navigate = useNavigate()
   const { invalidate } = useCustomerAuth()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -87,63 +88,16 @@ export default function Login() {
     <div className="bg-paper-soft/40 py-10 md:py-16">
       <div className="container-lap">
         <div className="mx-auto flex max-w-4xl overflow-hidden rounded-3xl border border-ink/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:min-h-[620px]">
-          {/* Brand panel */}
-          <div className="relative hidden w-[42%] shrink-0 flex-col justify-between overflow-hidden bg-gradient-to-br from-[#0b0c10] to-[#122057] p-10 text-white lg:flex">
-            <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
-            <div className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
-
-            <Link to="/" className="relative">
-              <img src="/images/lapsoo-logo-dark.png" alt="Lapsoo" className="h-8 w-auto" />
-            </Link>
-
-            <div className="relative space-y-8">
-              <div>
-                <h2 className="font-display text-2xl font-extrabold leading-tight">
-                  Your laptops, tracked and taken care of.
-                </h2>
-                <p className="mt-2 text-sm text-white/55">One account for LapAndTop, LaptopBazaar, and LapTech.</p>
-              </div>
-              <div className="space-y-5">
-                {perks.map((perk) => (
-                  <div key={perk.title} className="flex items-start gap-3.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                      <perk.icon className="h-4 w-4 text-blue-300" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{perk.title}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-white/50">{perk.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <p className="relative text-xs text-white/35">© {new Date().getFullYear()} Lapsoo · Gurgaon</p>
-          </div>
-
           {/* Form panel */}
           <div className="flex w-full flex-col justify-center p-6 sm:p-10 lg:w-[58%] lg:p-14">
-            <div className="mb-8 text-center lg:hidden">
-              <Link to="/">
-                <img src="/images/lapsoo-logo-light.png" alt="Lapsoo" className="mx-auto h-8 w-auto" />
-              </Link>
-            </div>
-
-            <div className="mx-auto w-full max-w-sm">
-              <h1 className="font-display text-2xl font-extrabold tracking-tight">
-                {mode === "login" ? "Welcome back" : "Create your account"}
-              </h1>
-              <p className="mt-1.5 text-sm text-ink/45">
-                {mode === "login" ? "Sign in to manage your orders and repairs." : "Takes less than a minute to get started."}
-              </p>
-
-              <div className="mt-6 flex rounded-full bg-ink/[0.04] p-1">
+            <div className="mx-auto w-full max-w-sm lg:mx-0">
+              <div className="flex rounded-full bg-ink/[0.04] p-1">
                 <button
                   type="button"
                   onClick={() => switchMode("login")}
                   className={cn(
-                    "flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-                    mode === "login" ? "bg-white text-ink shadow-sm" : "text-ink/50 hover:text-ink"
+                    "flex-1 rounded-full py-2.5 text-sm font-semibold transition-colors",
+                    mode === "login" ? "bg-blue-500 text-white shadow-[0_8px_20px_-6px_rgba(47,94,255,0.55)]" : "text-ink/50 hover:text-ink"
                   )}
                 >
                   Login
@@ -152,13 +106,20 @@ export default function Login() {
                   type="button"
                   onClick={() => switchMode("signup")}
                   className={cn(
-                    "flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-                    mode === "signup" ? "bg-white text-ink shadow-sm" : "text-ink/50 hover:text-ink"
+                    "flex-1 rounded-full py-2.5 text-sm font-semibold transition-colors",
+                    mode === "signup" ? "bg-blue-500 text-white shadow-[0_8px_20px_-6px_rgba(47,94,255,0.55)]" : "text-ink/50 hover:text-ink"
                   )}
                 >
                   Sign Up
                 </button>
               </div>
+
+              <h1 className="mt-6 font-display text-2xl font-extrabold tracking-tight">
+                {mode === "login" ? "Welcome back" : "Create your account"}
+              </h1>
+              <p className="mt-1.5 text-sm text-ink/45">
+                {mode === "login" ? "Please enter your details to sign in." : "Takes less than a minute to get started."}
+              </p>
 
               <AnimatePresence mode="wait">
                 {mode === "login" ? (
@@ -204,6 +165,20 @@ export default function Login() {
                       {loginForm.formState.errors.password && (
                         <p className="mt-1 text-xs text-red-500">{loginForm.formState.errors.password.message}</p>
                       )}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <label className="flex cursor-pointer items-center gap-2 text-ink/60">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="h-4 w-4 rounded border-ink/20 text-blue-500 focus:ring-blue-500/30"
+                        />
+                        Remember for 30 days
+                      </label>
+                      <Link to="/forgot-password" className="font-semibold text-blue-500 hover:text-blue-600">
+                        Forgot password
+                      </Link>
                     </div>
                     {serverError && <p className="text-sm text-red-500">{serverError}</p>}
                     <Button type="submit" variant="accent" size="lg" className="w-full" disabled={loginForm.formState.isSubmitting}>
@@ -283,7 +258,61 @@ export default function Login() {
                   </motion.form>
                 )}
               </AnimatePresence>
+
+              <p className="mt-6 text-center text-sm text-ink/50 lg:text-left">
+                Are you the Team Member?{" "}
+                <Link to="/admin/login" className="font-semibold text-blue-500 hover:text-blue-600">
+                  Admin
+                </Link>
+              </p>
             </div>
+          </div>
+
+          {/* Illustration panel */}
+          <div className="relative hidden w-[42%] shrink-0 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-blue-500 to-[#122057] p-10 text-white lg:flex">
+            <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute inset-0 opacity-20">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-full border border-white/30"
+                  style={{
+                    width: `${40 + i * 30}px`,
+                    height: `${40 + i * 30}px`,
+                    left: `${(i * 37) % 100}%`,
+                    top: `${(i * 53) % 100}%`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="relative flex flex-col items-center gap-8 text-center">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 backdrop-blur">
+                <ShieldCheck className="h-11 w-11 text-white" />
+              </div>
+              <div>
+                <h2 className="font-display text-2xl font-extrabold leading-tight">
+                  Your laptops, tracked and taken care of.
+                </h2>
+                <p className="mt-2 text-sm text-white/70">One account for LapAndTop, LaptopBazaar, and LapTech.</p>
+              </div>
+              <div className="w-full space-y-5 text-left">
+                {perks.map((perk) => (
+                  <div key={perk.title} className="flex items-start gap-3.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                      <perk.icon className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{perk.title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-white/60">{perk.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="relative mt-8 text-xs text-white/50">© {new Date().getFullYear()} Lapsoo · Gurgaon</p>
           </div>
         </div>
       </div>
