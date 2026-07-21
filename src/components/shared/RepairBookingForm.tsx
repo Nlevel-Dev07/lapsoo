@@ -13,20 +13,36 @@ import { MediaUploadField, emptyMediaSlots, type MediaSlots } from "@/components
 import { submitRepairBooking, ApiError } from "@/lib/api"
 import { useCustomerAuth } from "@/hooks/useCustomerAuth"
 
-const schema = z.object({
-  name: z.string().min(2, "Please enter your full name"),
-  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
-  email: z.string().email("Enter a valid email").optional().or(z.literal("")),
-  city: z.literal("Gurgaon"),
-  deviceCategory: z.enum(["Laptop", "Monitor", "All in One", "Desktop", "Printer", "Other"], { message: "Select a device category" }),
-  brand: z.enum(["Dell", "Lenovo", "ASUS", "Acer", "Apple", "HP", "Other"], { message: "Select a brand" }),
-  condition: z.enum(["Like New", "Medium", "Scratched"], { message: "Select the device condition" }),
-  device: z.string().min(1, "Device brand & model is required"),
-  serialNumber: z.string().optional(),
-  password: z.string().optional(),
-  issueType: z.enum(["Screen", "Battery", "Keyboard", "SSD/RAM Upgrade", "Motherboard", "Data Recovery", "Other"]),
-  message: z.string().optional(),
-})
+const schema = z
+  .object({
+    name: z.string().min(2, "Please enter your full name"),
+    phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
+    email: z.string().email("Enter a valid email").optional().or(z.literal("")),
+    city: z.literal("Gurgaon"),
+    deviceCategory: z.enum(["Laptop", "Monitor", "All in One", "Desktop", "Printer", "Other"], { message: "Select a device category" }),
+    deviceCategoryOther: z.string().optional(),
+    brand: z.enum(["Dell", "Lenovo", "ASUS", "Acer", "Apple", "HP", "Other"], { message: "Select a brand" }),
+    brandOther: z.string().optional(),
+    condition: z.enum(["Like New", "Medium", "Scratched"], { message: "Select the device condition" }),
+    device: z.string().min(1, "Device brand & model is required"),
+    serialNumber: z.string().min(1, "Serial number is required"),
+    password: z.string().optional(),
+    issueType: z.enum(["Screen", "Battery", "Keyboard", "SSD/RAM Upgrade", "Motherboard", "Data Recovery", "Other"]),
+    issueTypeOther: z.string().optional(),
+    message: z.string().optional(),
+  })
+  .refine((d) => d.deviceCategory !== "Other" || !!d.deviceCategoryOther?.trim(), {
+    message: "Please specify the device category",
+    path: ["deviceCategoryOther"],
+  })
+  .refine((d) => d.brand !== "Other" || !!d.brandOther?.trim(), {
+    message: "Please specify the brand",
+    path: ["brandOther"],
+  })
+  .refine((d) => d.issueType !== "Other" || !!d.issueTypeOther?.trim(), {
+    message: "Please specify the issue",
+    path: ["issueTypeOther"],
+  })
 
 type FormValues = z.infer<typeof schema>
 
@@ -42,11 +58,16 @@ export function RepairBookingForm() {
   const [locationError, setLocationError] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
   const [accessories, setAccessories] = useState<string[]>([])
+  const [accessoriesOther, setAccessoriesOther] = useState("")
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { city: "Gurgaon" } })
+  const deviceCategory = watch("deviceCategory")
+  const brand = watch("brand")
+  const issueType = watch("issueType")
 
   const toggleAccessory = (option: string) => {
     setAccessories((prev) => (prev.includes(option) ? prev.filter((a) => a !== option) : [...prev, option]))
@@ -80,12 +101,17 @@ export function RepairBookingForm() {
     } else {
       setMediaError(null)
     }
+    if (accessories.includes("Other") && !accessoriesOther.trim()) {
+      setServerError("Please specify the accessory")
+      return
+    }
     if (!valid) return
     try {
       const res = await submitRepairBooking({
         ...data,
         location,
         accessories,
+        accessoriesOther: accessoriesOther || undefined,
         mediaUrls: [mediaSlots.front, mediaSlots.back, mediaSlots.open, mediaSlots.video],
       })
       setTrackingCode(res.trackingCode)
@@ -182,6 +208,10 @@ export function RepairBookingForm() {
             <option value="Other">Other</option>
           </Select>
           {errors.deviceCategory && <p className="mt-1 text-xs text-red-500">{errors.deviceCategory.message}</p>}
+          {deviceCategory === "Other" && (
+            <Input className="mt-2" placeholder="Please specify the device category" {...register("deviceCategoryOther")} />
+          )}
+          {errors.deviceCategoryOther && <p className="mt-1 text-xs text-red-500">{errors.deviceCategoryOther.message}</p>}
         </div>
         <div>
           <Label htmlFor="brand">Brand *</Label>
@@ -196,6 +226,10 @@ export function RepairBookingForm() {
             <option value="Other">Other</option>
           </Select>
           {errors.brand && <p className="mt-1 text-xs text-red-500">{errors.brand.message}</p>}
+          {brand === "Other" && (
+            <Input className="mt-2" placeholder="Please specify the brand" {...register("brandOther")} />
+          )}
+          {errors.brandOther && <p className="mt-1 text-xs text-red-500">{errors.brandOther.message}</p>}
         </div>
         <div>
           <Label htmlFor="condition">Condition *</Label>
@@ -213,8 +247,9 @@ export function RepairBookingForm() {
           {errors.device && <p className="mt-1 text-xs text-red-500">{errors.device.message}</p>}
         </div>
         <div>
-          <Label htmlFor="serialNumber">Device Serial Number / Service Tag</Label>
+          <Label htmlFor="serialNumber">Device Serial Number / Service Tag *</Label>
           <Input id="serialNumber" placeholder="e.g. 5CD1234ABC" {...register("serialNumber")} />
+          {errors.serialNumber && <p className="mt-1 text-xs text-red-500">{errors.serialNumber.message}</p>}
         </div>
         <div>
           <Label htmlFor="issueType">Issue Type *</Label>
@@ -229,6 +264,10 @@ export function RepairBookingForm() {
             <option value="Other">Other</option>
           </Select>
           {errors.issueType && <p className="mt-1 text-xs text-red-500">{errors.issueType.message}</p>}
+          {issueType === "Other" && (
+            <Input className="mt-2" placeholder="Please specify the issue" {...register("issueTypeOther")} />
+          )}
+          {errors.issueTypeOther && <p className="mt-1 text-xs text-red-500">{errors.issueTypeOther.message}</p>}
         </div>
         <div>
           <Label htmlFor="password">Device Password (if any)</Label>
@@ -251,6 +290,14 @@ export function RepairBookingForm() {
             </label>
           ))}
         </div>
+        {accessories.includes("Other") && (
+          <Input
+            className="mt-2"
+            placeholder="Please specify the accessory"
+            value={accessoriesOther}
+            onChange={(e) => setAccessoriesOther(e.target.value)}
+          />
+        )}
       </div>
 
       <div>

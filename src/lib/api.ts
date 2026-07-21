@@ -113,13 +113,17 @@ export interface RepairBookingPayload {
   city?: string
   location?: string
   deviceCategory: string
+  deviceCategoryOther?: string
   brand: string
+  brandOther?: string
   condition: string
   device: string
-  serialNumber?: string
+  serialNumber: string
   password?: string
   accessories: string[]
+  accessoriesOther?: string
   issueType: string
+  issueTypeOther?: string
   message?: string
   mediaUrls: string[]
 }
@@ -135,6 +139,37 @@ export function trackRepair(code: string) {
   return request<{ trackingCode: string; status: string; device: string; issueType: string; createdAt: string; updatedAt: string }>(
     `/repair-requests/track?code=${encodeURIComponent(code)}`
   )
+}
+
+export interface Jobsheet {
+  trackingCode: string
+  name: string
+  phone: string
+  email: string | null
+  city: string | null
+  location: string | null
+  deviceCategory: string | null
+  deviceCategoryOther: string | null
+  brand: string | null
+  brandOther: string | null
+  condition: string | null
+  device: string
+  serialNumber: string | null
+  accessories: string[]
+  accessoriesOther: string | null
+  issueType: string
+  issueTypeOther: string | null
+  message: string | null
+  mediaUrls: string[]
+  estimateCost: number | null
+  estimateTime: string | null
+  status: string
+  store: string | null
+  createdAt: string
+}
+
+export function fetchJobsheet(code: string) {
+  return request<Jobsheet>(`/repair-requests/jobsheet?code=${encodeURIComponent(code)}`)
 }
 
 export interface SellExchangePayload {
@@ -425,9 +460,6 @@ export function updateRepairRequest(
 }
 export function deleteRepairRequest(id: string) {
   return request<void>(`/repair-requests/${id}`, { method: "DELETE" })
-}
-export function emailRepairJobsheet(id: string) {
-  return request<{ ok: true }>(`/repair-requests/${id}/email`, { method: "POST" })
 }
 
 export interface JobsheetPayload extends RepairBookingPayload {

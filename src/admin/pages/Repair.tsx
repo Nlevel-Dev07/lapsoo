@@ -1,15 +1,16 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { X, Mail, LocateFixed, Eye } from "lucide-react"
+import { X, LocateFixed, Eye, EyeOff, FileText, Search } from "lucide-react"
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
-import { SITE } from "@/data/site"
+import { SITE, waLinkTo } from "@/data/site"
 import { MediaUploadField, emptyMediaSlots, type MediaSlots } from "@/components/shared/MediaUploadField"
 import {
-  fetchRepairRequests, updateRepairRequest, deleteRepairRequest, emailRepairJobsheet,
+  fetchRepairRequests, updateRepairRequest, deleteRepairRequest,
   fetchTeamMembers, createJobsheet, ApiError,
   type RepairStatus,
 } from "@/lib/api"
@@ -23,16 +24,75 @@ import { useAdminAuth, useRequireMenu } from "@/admin/useAdminAuth"
 
 const repairStatuses: RepairStatus[] = ["BOOKED", "DIAGNOSING", "IN_PROGRESS", "WAITING_FOR_PARTS", "COMPLETED", "DELIVERED", "CANCELLED"]
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function jobsheetWhatsAppLink(r: any) {
+  const jobsheetUrl = `${window.location.origin}/jobsheet/${r.trackingCode}`
+  const message = [
+    `Hi ${r.name}, here's your Lapsoo repair jobsheet (${r.trackingCode}).`,
+    `Device: ${r.device}`,
+    `Issue: ${r.issueType === "Other" ? r.issueTypeOther || "Other" : r.issueType}`,
+    `Status: ${r.status.replace(/_/g, " ")}`,
+    `Estimate Cost: ${r.estimateCost != null ? `₹${r.estimateCost}` : "TBD"}`,
+    `Estimate Time: ${r.estimateTime ?? "TBD"}`,
+    `View full details: ${jobsheetUrl}`,
+    `You can track your status here: ${jobsheetUrl}`,
+  ].join("\n")
+  return waLinkTo(r.phone, message)
+}
+
 export default function Repair() {
   useRequireMenu("repair")
   const [newRepairOpen, setNewRepairOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<RepairStatus | "ALL">("ALL")
+  const [storeFilter, setStoreFilter] = useState<string>("ALL")
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "WALK_IN" | "ONLINE">("ALL")
+  const [assignedToFilter, setAssignedToFilter] = useState<string>("ALL")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
   const confirm = useConfirm()
   const toast = useToast()
   const queryClient = useQueryClient()
   const { data, isLoading } = useQuery({ queryKey: ["admin-repair"], queryFn: fetchRepairRequests })
   const { data: team } = useQuery({ queryKey: ["admin-team"], queryFn: fetchTeamMembers })
   const detailTarget = data?.find((r) => r.id === detailId) ?? null
+
+  const storeOptions = useMemo(
+    () => Array.from(new Set((data ?? []).map((r) => r.store).filter(Boolean))) as string[],
+    [data]
+  )
+
+  const visibleRows = useMemo(() => {
+    let rows = data ?? []
+    const q = search.trim().toLowerCase()
+    if (q) {
+      rows = rows.filter(
+        (r) =>
+          r.trackingCode.toLowerCase().includes(q) ||
+          r.name.toLowerCase().includes(q) ||
+          r.phone.toLowerCase().includes(q) ||
+          r.device.toLowerCase().includes(q)
+      )
+    }
+    if (statusFilter !== "ALL") rows = rows.filter((r) => r.status === statusFilter)
+    if (storeFilter !== "ALL") rows = rows.filter((r) => r.store === storeFilter)
+    if (typeFilter !== "ALL") rows = rows.filter((r) => r.type === typeFilter)
+    if (assignedToFilter !== "ALL") {
+      rows =
+        assignedToFilter === "UNASSIGNED"
+          ? rows.filter((r) => !r.assignedToId)
+          : rows.filter((r) => r.assignedToId === assignedToFilter)
+    }
+    if (dateFrom) rows = rows.filter((r) => new Date(r.createdAt) >= new Date(dateFrom))
+    if (dateTo) rows = rows.filter((r) => new Date(r.createdAt) <= new Date(`${dateTo}T23:59:59`))
+    rows = [...rows].sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      return sortOrder === "newest" ? -diff : diff
+    })
+    return rows
+  }, [data, search, statusFilter, storeFilter, typeFilter, assignedToFilter, dateFrom, dateTo, sortOrder])
 
   const update = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof updateRepairRequest>[1] }) => updateRepairRequest(id, payload),
@@ -46,11 +106,6 @@ export default function Repair() {
       toast.success("Repair request deleted.")
     },
     onError: () => toast.error("Could not delete repair request."),
-  })
-  const emailJobsheet = useMutation({
-    mutationFn: emailRepairJobsheet,
-    onSuccess: () => toast.success("Jobsheet emailed."),
-    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not send email."),
   })
 
   const activeTeam = team?.filter((t) => t.active) ?? []
@@ -67,12 +122,48 @@ export default function Repair() {
         }
       />
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/30" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tracking ID, customer, device..."
+            className="h-9 w-64 pl-8 text-xs"
+          />
+        </div>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as RepairStatus | "ALL")} className="h-9 w-auto text-xs">
+          <option value="ALL">All Statuses</option>
+          {repairStatuses.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+        </Select>
+        <Select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} className="h-9 w-auto text-xs">
+          <option value="ALL">All Stores</option>
+          {storeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+        </Select>
+        <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as "ALL" | "WALK_IN" | "ONLINE")} className="h-9 w-auto text-xs">
+          <option value="ALL">All Types</option>
+          <option value="WALK_IN">Walk-in</option>
+          <option value="ONLINE">Online</option>
+        </Select>
+        <Select value={assignedToFilter} onChange={(e) => setAssignedToFilter(e.target.value)} className="h-9 w-auto text-xs">
+          <option value="ALL">All Assignees</option>
+          <option value="UNASSIGNED">Unassigned</option>
+          {activeTeam.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </Select>
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-auto text-xs" />
+        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-auto text-xs" />
+        <Select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")} className="h-9 w-auto text-xs">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </Select>
+      </div>
+
+      <div className="mt-3">
         <LeadTable
           isLoading={isLoading}
-          empty={!data?.length}
+          empty={!visibleRows.length}
           columns={["Tracking ID", "Customer", "Device", "Type", "Assigned To", "Date", "Status", ""]}
-          rows={data?.map((r) => [
+          rows={visibleRows.map((r) => [
             <span className="font-mono text-xs font-semibold">{r.trackingCode}</span>,
             <ContactCell phone={r.phone} email={r.email} name={r.name} />,
             <div className="max-w-[180px] truncate" title={r.device}>{r.device}</div>,
@@ -92,14 +183,15 @@ export default function Repair() {
               >
                 <Eye className="h-4 w-4 text-ink/50" />
               </button>
-              <button
-                onClick={() => emailJobsheet.mutate(r.id)}
-                disabled={!r.email || emailJobsheet.isPending}
-                title={r.email ? "Email jobsheet to customer" : "No email on file"}
-                className="p-2 rounded-lg hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
+              <a
+                href={jobsheetWhatsAppLink(r)}
+                target="_blank"
+                rel="noreferrer"
+                title="Send jobsheet via WhatsApp"
+                className="p-2 rounded-lg hover:bg-green-50"
               >
-                <Mail className="h-4 w-4 text-blue-500" />
-              </button>
+                <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+              </a>
               <DeleteButton
                 onClick={async () => {
                   const ok = await confirm({ title: "Delete this repair request?", confirmLabel: "Delete", danger: true })
@@ -117,8 +209,6 @@ export default function Repair() {
           activeTeam={activeTeam}
           onClose={() => setDetailId(null)}
           onUpdate={(payload) => update.mutate({ id: detailTarget.id, payload })}
-          onEmailJobsheet={() => emailJobsheet.mutate(detailTarget.id)}
-          emailPending={emailJobsheet.isPending}
         />
       )}
 
@@ -150,16 +240,12 @@ function RepairDetailDrawer({
   activeTeam,
   onClose,
   onUpdate,
-  onEmailJobsheet,
-  emailPending,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   repair: any
   activeTeam: { id: string; name: string }[]
   onClose: () => void
   onUpdate: (payload: Parameters<typeof updateRepairRequest>[1]) => void
-  onEmailJobsheet: () => void
-  emailPending: boolean
 }) {
   const r = repair
   const accessories = (r.accessories as string[]) ?? []
@@ -177,13 +263,17 @@ function RepairDetailDrawer({
         </Section>
 
         <Section title="Device">
-          <Field label="Category">{r.deviceCategory || "—"}</Field>
-          <Field label="Brand">{r.brand || "—"}</Field>
+          <Field label="Category">{r.deviceCategory === "Other" ? `Other — ${r.deviceCategoryOther || "—"}` : r.deviceCategory || "—"}</Field>
+          <Field label="Brand">{r.brand === "Other" ? `Other — ${r.brandOther || "—"}` : r.brand || "—"}</Field>
           <Field label="Condition">{r.condition || "—"}</Field>
           <Field label="Device">{r.device}</Field>
           <Field label="Serial Number">{r.serialNumber || "—"}</Field>
-          <Field label="Accessories">{accessories.length ? accessories.join(", ") : "—"}</Field>
-          <Field label="Issue Type">{r.issueType}</Field>
+          <Field label="Accessories">
+            {accessories.length
+              ? accessories.map((a) => (a === "Other" ? `Other — ${r.accessoriesOther || "—"}` : a)).join(", ")
+              : "—"}
+          </Field>
+          <Field label="Issue Type">{r.issueType === "Other" ? `Other — ${r.issueTypeOther || "—"}` : r.issueType}</Field>
         </Section>
 
         {r.message && (
@@ -255,15 +345,18 @@ function RepairDetailDrawer({
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={onEmailJobsheet}
-          disabled={!r.email || emailPending}
-        >
-          <Mail className="h-4 w-4" /> {r.email ? "Email Jobsheet to Customer" : "No email on file"}
-        </Button>
+        <div className="grid grid-cols-2 gap-3">
+          <a href={jobsheetWhatsAppLink(r)} target="_blank" rel="noreferrer">
+            <Button type="button" variant="whatsapp" className="w-full">
+              <WhatsAppIcon className="h-4 w-4" /> Send via WhatsApp
+            </Button>
+          </a>
+          <a href={`/jobsheet/${r.trackingCode}`} target="_blank" rel="noreferrer">
+            <Button type="button" variant="outline" className="w-full">
+              <FileText className="h-4 w-4" /> View / Print Jobsheet
+            </Button>
+          </a>
+        </div>
       </div>
     </Drawer>
   )
@@ -316,14 +409,19 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
   const [location, setLocation] = useState("")
   const [locating, setLocating] = useState(false)
   const [deviceCategory, setDeviceCategory] = useState("")
+  const [deviceCategoryOther, setDeviceCategoryOther] = useState("")
   const [brand, setBrand] = useState("")
+  const [brandOther, setBrandOther] = useState("")
   const [condition, setCondition] = useState("")
   const [device, setDevice] = useState("")
   const [serialNumber, setSerialNumber] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [issueType, setIssueType] = useState("")
+  const [issueTypeOther, setIssueTypeOther] = useState("")
   const [message, setMessage] = useState("")
   const [accessories, setAccessories] = useState<string[]>([])
+  const [accessoriesOther, setAccessoriesOther] = useState("")
   const [store, setStore] = useState("")
   const [mediaSlots, setMediaSlots] = useState<MediaSlots>(emptyMediaSlots)
   const [error, setError] = useState<string | null>(null)
@@ -355,13 +453,17 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
         city: "Gurgaon",
         location,
         deviceCategory,
+        deviceCategoryOther: deviceCategoryOther || undefined,
         brand,
+        brandOther: brandOther || undefined,
         condition,
         device,
-        serialNumber: serialNumber || undefined,
+        serialNumber,
         password: password || undefined,
         accessories,
+        accessoriesOther: accessoriesOther || undefined,
         issueType,
+        issueTypeOther: issueTypeOther || undefined,
         message: message || undefined,
         mediaUrls: [mediaSlots.front, mediaSlots.back, mediaSlots.open, mediaSlots.video],
         store,
@@ -405,6 +507,11 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
               setError(null)
               if (!location.trim()) return setError("Location is required")
               if (!store) return setError("Select a store")
+              if (!serialNumber.trim()) return setError("Serial number is required")
+              if (deviceCategory === "Other" && !deviceCategoryOther.trim()) return setError("Please specify the device category")
+              if (brand === "Other" && !brandOther.trim()) return setError("Please specify the brand")
+              if (issueType === "Other" && !issueTypeOther.trim()) return setError("Please specify the issue")
+              if (accessories.includes("Other") && !accessoriesOther.trim()) return setError("Please specify the accessory")
               if (!mediaSlots.front || !mediaSlots.back || !mediaSlots.open || !mediaSlots.video) return setError("All four photos/video are required")
               create.mutate()
             }}
@@ -461,6 +568,14 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
                   <option value="" disabled>Select device category</option>
                   {["Laptop", "Monitor", "All in One", "Desktop", "Printer", "Other"].map((o) => <option key={o} value={o}>{o}</option>)}
                 </Select>
+                {deviceCategory === "Other" && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Please specify the device category"
+                    value={deviceCategoryOther}
+                    onChange={(e) => setDeviceCategoryOther(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <Label>Brand *</Label>
@@ -468,6 +583,14 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
                   <option value="" disabled>Select brand</option>
                   {["Dell", "Lenovo", "ASUS", "Acer", "Apple", "HP", "Other"].map((o) => <option key={o} value={o}>{o}</option>)}
                 </Select>
+                {brand === "Other" && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Please specify the brand"
+                    value={brandOther}
+                    onChange={(e) => setBrandOther(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <Label>Condition *</Label>
@@ -481,8 +604,8 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
                 <Input value={device} onChange={(e) => setDevice(e.target.value)} required />
               </div>
               <div>
-                <Label>Serial Number</Label>
-                <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+                <Label>Serial Number *</Label>
+                <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} required />
               </div>
               <div>
                 <Label>Issue Type *</Label>
@@ -490,10 +613,34 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
                   <option value="" disabled>Select issue type</option>
                   {["Screen", "Battery", "Keyboard", "SSD/RAM Upgrade", "Motherboard", "Data Recovery", "Other"].map((o) => <option key={o} value={o}>{o}</option>)}
                 </Select>
+                {issueType === "Other" && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Please specify the issue"
+                    value={issueTypeOther}
+                    onChange={(e) => setIssueTypeOther(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <Label>Device Password (if any)</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    className="pr-11"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink/30 transition-colors hover:text-ink/60"
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -507,6 +654,14 @@ function NewRepairModal({ onClose }: { onClose: () => void }) {
                   </label>
                 ))}
               </div>
+              {accessories.includes("Other") && (
+                <Input
+                  className="mt-2"
+                  placeholder="Please specify the accessory"
+                  value={accessoriesOther}
+                  onChange={(e) => setAccessoriesOther(e.target.value)}
+                />
+              )}
             </div>
 
             <div>

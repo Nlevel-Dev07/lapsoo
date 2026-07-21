@@ -14,6 +14,7 @@ import SellExchange from "@/pages/SellExchange"
 import Login from "@/pages/Login"
 import ForgotPassword from "@/pages/ForgotPassword"
 import Account from "@/pages/Account"
+import Jobsheet from "@/pages/Jobsheet"
 import NotFound from "@/pages/NotFound"
 
 import { ProtectedRoute } from "@/admin/ProtectedRoute"
@@ -54,6 +55,8 @@ function App() {
           <Route path="/account" element={<Account />} />
           <Route path="*" element={<NotFound />} />
         </Route>
+
+        <Route path="/jobsheet/:trackingCode" element={<Jobsheet />} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route element={<ProtectedRoute />}>

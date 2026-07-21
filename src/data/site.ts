@@ -54,6 +54,13 @@ export function waLink(message: string) {
   return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`
 }
 
+// Deep-links to an arbitrary customer number (as opposed to waLink, which always targets SITE.whatsapp).
+export function waLinkTo(phone: string, message: string) {
+  const digits = phone.replace(/\D/g, "")
+  const withCountryCode = digits.length === 10 ? `91${digits}` : digits
+  return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`
+}
+
 export function telLink() {
   return `tel:+${SITE.phoneRaw}`
 }

@@ -80,7 +80,10 @@ export default function Home() {
   })
 
   const { data: allProducts } = useQuery({ queryKey: ["products", "all"], queryFn: () => fetchProducts() })
-  const featured = (allProducts ?? []).slice(0, 4)
+  const featured = [
+    ...(allProducts ?? []).filter((p) => p.ecosystem === "laptopbazaar").slice(0, 2),
+    ...(allProducts ?? []).filter((p) => p.ecosystem === "lapandtop").slice(0, 2),
+  ]
 
   return (
     <div>
@@ -264,12 +267,7 @@ export default function Home() {
       {/* FEATURED PRODUCTS */}
       <section className="py-20 md:py-28">
         <div className="container-lap">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading eyebrow="Featured" title="Popular right now" className="mb-0" />
-            <Link to="/lapandtop" className="text-sm font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
-              View all products <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <SectionHeading eyebrow="Featured" title="Popular right now" className="mb-0" />
           <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {featured.map((p, i) => (
               <ProductCard key={p.slug} p={p} index={i} />

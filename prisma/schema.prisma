@@ -202,13 +202,17 @@ model RepairRequest {
   city           String?
   location       String?      @db.Text
   deviceCategory String?
+  deviceCategoryOther String?
   brand          String?
+  brandOther     String?
   condition      String?
   device         String
   serialNumber   String?
   password       String?
   accessories    Json         @default("[]")
+  accessoriesOther String?
   issueType      String
+  issueTypeOther String?
   message        String?      @db.Text
   mediaUrls      Json         @default("[]")
   estimateCost   Int?
